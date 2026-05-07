@@ -1,0 +1,231 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+
+  --ct-shell-max: 1080px;
+  --ct-radius-xl: 18px;
+  --ct-radius-lg: 14px;
+  --ct-radius-md: 12px;
+
+  --ct-text-2xl: 20px;
+  --ct-text-xl: 18px;
+  --ct-text-lg: 16px;
+  --ct-text-md: 14px;
+  --ct-text-sm: 12px;
+  --ct-text-xs: 11px;
+
+  --ct-pad-page: 10px;
+  --ct-pad-card: 12px;
+  --ct-pad-card-sm: 10px;
+
+  --ct-shadow-soft: 0 10px 24px rgba(15, 23, 42, 0.06);
+  --ct-shadow-panel: 0 16px 38px rgba(15, 23, 42, 0.10);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #eef3f9;
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* ===== KroniX Store ===== */
+.ct-soft-shadow {
+  box-shadow: var(--ct-shadow-soft);
+}
+
+.ct-card-border {
+  border: 1px solid rgba(148, 163, 184, 0.28);
+}
+
+.ct-header-shadow {
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.ct-store-bg {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top, rgba(37, 99, 235, 0.06), transparent 28%),
+    linear-gradient(180deg, #eef3f9 0%, #e9eff7 100%);
+}
+
+.ct-tablet {
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.ct-shell {
+  max-width: var(--ct-shell-max);
+}
+
+.ct-panel {
+  border-radius: var(--ct-radius-xl);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.94) 0%,
+    rgba(248, 250, 252, 0.96) 100%
+  );
+  box-shadow: var(--ct-shadow-soft);
+}
+
+.ct-tab-frame {
+  min-height: 620px;
+  height: 620px;
+}
+
+@media (max-height: 900px) {
+  .ct-tab-frame {
+    min-height: 560px;
+    height: 560px;
+  }
+}
+
+.ct-section-title {
+  font-size: var(--ct-text-2xl);
+  font-weight: 900;
+  line-height: 1.05;
+  color: #0f172a;
+}
+
+.ct-section-desc {
+  font-size: var(--ct-text-sm);
+  font-weight: 500;
+  color: #64748b;
+}
+
+.ct-card {
+  border-radius: var(--ct-radius-xl);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+}
+
+.ct-card-compact {
+  border-radius: var(--ct-radius-lg);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.ct-muted-label {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #94a3b8;
+}
+
+.ct-stat-value {
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.05;
+  color: #0f172a;
+}
+
+/* Scrollbars premium */
+.ct-scroll-y,
+.ct-scroll-x {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+}
+
+.ct-scroll-y {
+  overflow-y: auto;
+}
+
+.ct-scroll-y::-webkit-scrollbar {
+  width: 7px;
+}
+
+.ct-scroll-y::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ct-scroll-y::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.38);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.ct-scroll-y::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.56);
+  background-clip: padding-box;
+}
+
+.ct-scroll-x {
+  overflow-x: auto;
+}
+
+.ct-scroll-x::-webkit-scrollbar {
+  height: 7px;
+}
+
+.ct-scroll-x::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ct-scroll-x::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.38);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.ct-scroll-x::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.56);
+  background-clip: padding-box;
+}
+
+/* Scrollbar global sutil */
+*::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.34);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.52);
+}
+
+@media (max-height: 900px) {
+  :root {
+    --ct-shell-max: 1040px;
+    --ct-text-2xl: 18px;
+    --ct-text-xl: 17px;
+    --ct-text-lg: 15px;
+    --ct-text-md: 13px;
+    --ct-text-sm: 11px;
+    --ct-text-xs: 10px;
+    --ct-pad-page: 8px;
+    --ct-pad-card: 10px;
+    --ct-pad-card-sm: 8px;
+  }
+
+  .ct-tablet {
+    font-size: 13px;
+  }
+}
