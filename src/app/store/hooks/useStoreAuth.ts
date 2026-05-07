@@ -10,20 +10,25 @@ import {
   saveStoreToken,
 } from "../lib/storeUtils";
 
-const API_BASE = process.env.NEXT_PUBLIC_API || "http://localhost:3004";
+function getApiBase() {
+  if (typeof window !== "undefined") {
+    return "/api/store";
+  }
+
+  return process.env.NEXT_PUBLIC_API || "http://localhost:3004";
+}
+
+function apiUrl(path: string) {
+  return `${getApiBase()}${path}`;
+}
 
 function getStoreWrongRoleMessage(role?: string | null) {
   const r = String(role ?? "").toUpperCase();
 
-  if (r === "BUYER") {
-    return "Tu cuenta es de cliente. Debes ingresar desde la app Buyer.";
-  }
-  if (r === "DRIVER") {
-    return "Tu cuenta es de conductor. Debes ingresar desde la app Driver.";
-  }
-  if (r === "ADMIN" || r === "FINANCE") {
-    return "Tu cuenta es administrativa. Debes ingresar desde el CTCC.";
-  }
+  if (r === "BUYER") return "Tu cuenta es de cliente. Debes ingresar desde la app Buyer.";
+  if (r === "DRIVER") return "Tu cuenta es de conductor. Debes ingresar desde la app Driver.";
+  if (r === "ADMIN" || r === "FINANCE") return "Tu cuenta es administrativa. Debes ingresar desde el CTCC.";
+
   return "Debes ingresar con un usuario de tienda válido para usar esta app.";
 }
 
@@ -59,7 +64,6 @@ export function useStoreAuth() {
     const saved = loadStoreCode();
     setStoreCode(saved);
     setInputStoreCode(saved);
-
     setLoginStoreCode("");
 
     const tok = loadStoreToken();
@@ -81,7 +85,7 @@ export function useStoreAuth() {
 
   async function logoutWithoutPause() {
     try {
-      await fetch(`${API_BASE}/auth/logout`, {
+      await fetch(apiUrl("/auth/logout"), {
         method: "POST",
         headers: { "x-ct-app": "store" },
         credentials: "include",
@@ -100,7 +104,7 @@ export function useStoreAuth() {
     setCheckingRole(true);
 
     try {
-      const res = await fetch(`${API_BASE}/auth/me`, {
+      const res = await fetch(apiUrl("/auth/me"), {
         method: "GET",
         headers: {
           "x-ct-app": "store",
@@ -110,9 +114,7 @@ export function useStoreAuth() {
         cache: "no-store",
       });
 
-      if (!res.ok) {
-        throw new Error(`Error ${res.status}`);
-      }
+      if (!res.ok) throw new Error(`Error ${res.status}`);
 
       const data = (await res.json()) as any;
       const user = data?.user ?? null;
@@ -134,7 +136,7 @@ export function useStoreAuth() {
 
       setAccessDeniedMessage(null);
       return true;
-    } catch (e) {
+    } catch {
       await logoutWithoutPause();
       return false;
     } finally {
@@ -146,7 +148,7 @@ export function useStoreAuth() {
     if (refreshingRef.current) return refreshingRef.current;
 
     refreshingRef.current = (async () => {
-      const res = await fetch(`${API_BASE}/auth/refresh`, {
+      const res = await fetch(apiUrl("/auth/refresh"), {
         method: "POST",
         headers: { "x-ct-app": "store" },
         credentials: "include",
@@ -187,7 +189,7 @@ export function useStoreAuth() {
     const code = String(storeCode ?? "").trim();
     if (!tok && code) headers["x-store-code"] = code;
 
-    const res = await fetch(`${API_BASE}${path}`, {
+    const res = await fetch(apiUrl(path), {
       ...init,
       headers,
       credentials: "include",
@@ -201,7 +203,7 @@ export function useStoreAuth() {
         Authorization: `Bearer ${newTok}`,
       };
 
-      const res2 = await fetch(`${API_BASE}${path}`, {
+      const res2 = await fetch(apiUrl(path), {
         ...init,
         headers: headers2,
         credentials: "include",
@@ -240,7 +242,7 @@ export function useStoreAuth() {
         return;
       }
 
-      const res = await fetch(`${API_BASE}/auth/login`, {
+      const res = await fetch(apiUrl("/auth/login"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -284,7 +286,7 @@ export function useStoreAuth() {
         return;
       }
 
-      const res = await fetch(`${API_BASE}/auth/request-password-reset`, {
+      const res = await fetch(apiUrl("/auth/request-password-reset"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -343,7 +345,7 @@ export function useStoreAuth() {
         return;
       }
 
-      const res = await fetch(`${API_BASE}/auth/reset-password`, {
+      const res = await fetch(apiUrl("/auth/reset-password"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -410,7 +412,7 @@ export function useStoreAuth() {
         }
       }
 
-      await fetch(`${API_BASE}/auth/logout`, {
+      await fetch(apiUrl("/auth/logout"), {
         method: "POST",
         headers: { "x-ct-app": "store" },
         credentials: "include",

@@ -1,7 +1,10 @@
 //src\app\store\lib\constants.ts
 import type { PrintPrefs } from "./storeTypes";
 
-export const API_BASE = process.env.NEXT_PUBLIC_API || "http://localhost:3004";
+export const API_BASE =
+  typeof window !== "undefined"
+    ? "/api/store"
+    : process.env.NEXT_PUBLIC_API || "http://localhost:3004";
 
 export const STORE_CODE_KEY = "store_active_storeCode_v1";
 export const STORE_TAB_KEY = "store_active_tab_v1";
