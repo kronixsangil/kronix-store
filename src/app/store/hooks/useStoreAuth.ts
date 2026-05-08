@@ -66,8 +66,7 @@ export function useStoreAuth() {
     setInputStoreCode(saved);
     setLoginStoreCode("");
 
-    const tok = loadStoreToken();
-    setAccessToken(tok);
+    setAccessToken("");
 
     setAuthChecked(true);
   }, []);
@@ -98,8 +97,7 @@ export function useStoreAuth() {
   }
 
   async function verifyStoreRole(tokenOverride?: string) {
-    const token = String(tokenOverride ?? accessToken ?? "").trim();
-    if (!token) return false;
+    const token = "COOKIE_AUTH";
 
     setCheckingRole(true);
 
@@ -107,9 +105,8 @@ export function useStoreAuth() {
       const res = await fetch(apiUrl("/auth/me"), {
         method: "GET",
         headers: {
-          "x-ct-app": "store",
-          Authorization: `Bearer ${token}`,
-        },
+  "x-ct-app": "store",
+},
         credentials: "include",
         cache: "no-store",
       });
@@ -159,14 +156,8 @@ export function useStoreAuth() {
         throw new Error(txt || `Refresh failed (${res.status})`);
       }
 
-      const out = (await res.json()) as any;
-      const newToken = String(out?.accessToken ?? "").trim();
-      if (!newToken) throw new Error("Refresh no devolvió accessToken");
-
-      saveStoreToken(newToken);
-      setAccessToken(newToken);
-
-      return newToken;
+      await res.json().catch(() => null);
+return "COOKIE_OK";
     })();
 
     try {
@@ -177,14 +168,12 @@ export function useStoreAuth() {
   }
 
   async function storeFetch<T>(path: string, init?: RequestInit, retry = true): Promise<T> {
-    const tok = String(accessToken ?? "").trim();
+    const tok = "";
 
     const headers: Record<string, string> = {
       "x-ct-app": "store",
       ...(init?.headers ? (init.headers as any) : {}),
     };
-
-    if (tok) headers["Authorization"] = `Bearer ${tok}`;
 
     const code = String(storeCode ?? "").trim();
     if (!tok && code) headers["x-store-code"] = code;
@@ -196,12 +185,11 @@ export function useStoreAuth() {
     });
 
     if (res.status === 401 && retry) {
-      const newTok = await refreshStoreSession();
+      await refreshStoreSession();
 
-      const headers2: Record<string, string> = {
-        ...headers,
-        Authorization: `Bearer ${newTok}`,
-      };
+const headers2: Record<string, string> = {
+  ...headers,
+};
 
       const res2 = await fetch(apiUrl(path), {
         ...init,
@@ -258,14 +246,10 @@ export function useStoreAuth() {
       }
 
       const out = (await res.json()) as any;
-      const token = String(out?.accessToken ?? "").trim();
-      if (!token) throw new Error("Login no devolvió accessToken");
+      const accessOk = await verifyStoreRole();
+if (!accessOk) return;
 
-      saveStoreToken(token);
-      setAccessToken(token);
-
-      const accessOk = await verifyStoreRole(token);
-      if (!accessOk) return;
+setAccessToken("COOKIE_AUTH");
     } catch (e: any) {
       setLoginErr(e?.message ?? "No se pudo iniciar sesión");
     } finally {

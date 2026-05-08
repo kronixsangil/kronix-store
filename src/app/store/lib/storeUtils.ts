@@ -5,8 +5,7 @@ import {
   DEFAULT_PRINT_PREFS,
   PRINT_PREFS_KEY,
   STORE_CODE_KEY,
-  STORE_TAB_KEY,
-  STORE_TOKEN_KEY,
+  STORE_TAB_KEY,  
   PLATFORM_COMMISSION_RATE,
   TabKey,
 } from "./storeTypes";
@@ -54,22 +53,12 @@ export function saveTab(tab: TabKey) {
 }
 
 export function loadStoreToken(): string {
-  try {
-    return localStorage.getItem(STORE_TOKEN_KEY) || "";
-  } catch {
-    return "";
-  }
+  return "";
 }
-export function saveStoreToken(token: string) {
-  try {
-    localStorage.setItem(STORE_TOKEN_KEY, token);
-  } catch {}
-}
-export function clearStoreToken() {
-  try {
-    localStorage.removeItem(STORE_TOKEN_KEY);
-  } catch {}
-}
+
+export function saveStoreToken(_: string) {}
+
+export function clearStoreToken() {}
 
 export function loadPrintPrefs(): PrintPrefs {
   try {
@@ -124,23 +113,18 @@ async function refreshStoreAccessToken(base: string): Promise<string> {
     throw new Error(txt || `Refresh failed (${res.status})`);
   }
 
-  const out = (await res.json()) as any;
-  const token = String(out?.accessToken ?? "").trim();
-  if (!token) throw new Error("Refresh no devolvió accessToken");
-
-  saveStoreToken(token);
-  return token;
+  return "COOKIE_OK";
 }
 
 function mergeHeaders(base?: Record<string, string>, extra?: Record<string, string>) {
   return { ...(base ?? {}), ...(extra ?? {}) };
 }
 
-function withBearer(headers: Record<string, string> | undefined, token: string) {
-  const h = { ...(headers ?? {}) };
-  const t = String(token ?? "").trim();
-  if (t) h["Authorization"] = `Bearer ${t}`;
-  return h;
+function withBearer(
+  headers: Record<string, string> | undefined,
+  _token: string
+) {
+  return { ...(headers ?? {}) };
 }
 
 export async function apiGet<T>(base: string, path: string, headers?: Record<string, string>): Promise<T> {
