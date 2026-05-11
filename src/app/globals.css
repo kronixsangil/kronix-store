@@ -4,7 +4,7 @@
   --background: #ffffff;
   --foreground: #171717;
 
-  --ct-shell-max: 1080px;
+  --ct-shell-max: min(96vw, 1420px);
   --ct-radius-xl: 18px;
   --ct-radius-lg: 14px;
   --ct-radius-md: 12px;
@@ -70,6 +70,7 @@ body {
 }
 
 .ct-shell {
+  width: min(96vw, 1420px);
   max-width: var(--ct-shell-max);
 }
 
@@ -85,8 +86,8 @@ body {
 }
 
 .ct-tab-frame {
-  min-height: 620px;
-  height: 620px;
+  min-height: calc(100dvh - 112px);
+  height: calc(100dvh - 112px);
 }
 
 @media (max-height: 900px) {
