@@ -651,8 +651,8 @@ export default function StoreDashboard() {
 
   return (
     <StoreCityProvider value={cityContextValue}>
-      <main className="min-h-screen ct-store-bg ct-tablet">
-  <div className="mx-auto ct-shell px-2 py-2">
+      <main className="min-h-screen w-screen overflow-hidden ct-store-bg ct-tablet">
+  <div className="h-screen w-screen px-2 py-2">
           <div className="overflow-hidden rounded-[22px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(248,250,252,0.95)_100%)] shadow-[0_20px_60px_rgba(15,23,42,0.10)] backdrop-blur">
             <StoreDashboardHeader
               tab={tab}

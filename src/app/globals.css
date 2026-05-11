@@ -86,14 +86,14 @@ body {
 }
 
 .ct-tab-frame {
-  min-height: calc(100dvh - 112px);
-  height: calc(100dvh - 112px);
+  min-height: calc(100dvh - 96px);
+  height: calc(100dvh - 96px);
 }
 
 @media (max-height: 900px) {
   .ct-tab-frame {
-    min-height: 560px;
-    height: 560px;
+    min-height: calc(100dvh - 92px);
+    height: calc(100dvh - 92px);
   }
 }
 

@@ -413,7 +413,7 @@ export default function OrdersTab({
   }
 
   return (
-    <div className="ct-tab-frame grid h-full min-h-0 gap-2 xl:grid-cols-[210px_minmax(0,1fr)]">
+    <div className="ct-tab-frame grid h-full min-h-0 gap-2 grid-cols-[210px_minmax(0,1fr)]">
       <aside className="rounded-[20px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(248,250,252,0.96)_100%)] p-3 shadow-[0_10px_22px_rgba(15,23,42,0.06)]">
         <div className="flex h-full min-h-[470px] flex-col">
           <div className="text-[9px] font-extrabold uppercase tracking-[0.20em] text-slate-400">Órdenes</div>
@@ -496,7 +496,7 @@ export default function OrdersTab({
       </aside>
 
       <section className="min-h-0 rounded-[20px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.72)_0%,rgba(248,250,252,0.85)_100%)] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
-        <div className="grid h-full min-h-0 gap-2 xl:grid-cols-[300px_minmax(0,1fr)]">
+        <div className="grid h-full min-h-0 gap-2 grid-cols-[320px_minmax(0,1fr)]">
           <div
             className={[
               "flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[18px] border border-white/60 shadow-[0_10px_20px_rgba(15,23,42,0.055)]",
