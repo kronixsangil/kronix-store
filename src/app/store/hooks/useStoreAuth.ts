@@ -5,9 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   clearStoreToken,
   loadStoreCode,
-  loadStoreToken,
   saveStoreCode,
-  saveStoreToken,
 } from "../lib/storeUtils";
 
 function getApiBase() {
@@ -60,26 +58,20 @@ export function useStoreAuth() {
 
   const refreshingRef = useRef<Promise<string> | null>(null);
 
-  function requestStorePushRegistration() {
-  try {
-    if (typeof window === "undefined") return;
+  function requestStorePushRegistration(delayMs = 900) {
+    try {
+      if (typeof window === "undefined") return;
 
-    window.setTimeout(() => {
-      window.dispatchEvent(new Event("kronix-store-auth-ready"));
-    }, 800);
-  } catch {}
-}
+      window.setTimeout(() => {
+        window.dispatchEvent(new Event("kronix-store-auth-ready"));
 
-  useEffect(() => {
-    const saved = loadStoreCode();
-    setStoreCode(saved);
-    setInputStoreCode(saved);
-    setLoginStoreCode("");
-
-    setAccessToken("");
-
-    setAuthChecked(true);
-  }, []);
+        const fn = (window as any).__kronixRegisterStorePush;
+        if (typeof fn === "function") {
+          fn();
+        }
+      }, delayMs);
+    } catch {}
+  }
 
   function isUnauthorizedErrMessage(msg: string) {
     const m = String(msg || "").toLowerCase();
@@ -106,17 +98,15 @@ export function useStoreAuth() {
     clearLocalStoreSession();
   }
 
-  async function verifyStoreRole(tokenOverride?: string) {
-    const token = "COOKIE_AUTH";
-
+  async function verifyStoreRole() {
     setCheckingRole(true);
 
     try {
       const res = await fetch(apiUrl("/auth/me"), {
         method: "GET",
         headers: {
-  "x-ct-app": "store",
-},
+          "x-ct-app": "store",
+        },
         credentials: "include",
         cache: "no-store",
       });
@@ -144,12 +134,60 @@ export function useStoreAuth() {
       setAccessDeniedMessage(null);
       return true;
     } catch {
-      await logoutWithoutPause();
       return false;
     } finally {
       setCheckingRole(false);
     }
   }
+
+  async function restoreSessionFromCookie() {
+    const ok = await verifyStoreRole();
+
+    if (ok) {
+      setAccessToken("COOKIE_AUTH");
+      requestStorePushRegistration(1200);
+      return true;
+    }
+
+    try {
+      await refreshStoreSession();
+      const okAfterRefresh = await verifyStoreRole();
+
+      if (okAfterRefresh) {
+        setAccessToken("COOKIE_AUTH");
+        requestStorePushRegistration(1200);
+        return true;
+      }
+    } catch {}
+
+    setAccessToken("");
+    return false;
+  }
+
+  useEffect(() => {
+    let alive = true;
+
+    async function bootAuth() {
+      const saved = loadStoreCode();
+
+      if (!alive) return;
+
+      setStoreCode(saved);
+      setInputStoreCode(saved);
+      setLoginStoreCode("");
+
+      await restoreSessionFromCookie();
+
+      if (!alive) return;
+      setAuthChecked(true);
+    }
+
+    bootAuth();
+
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   async function refreshStoreSession(): Promise<string> {
     if (refreshingRef.current) return refreshingRef.current;
@@ -167,7 +205,7 @@ export function useStoreAuth() {
       }
 
       await res.json().catch(() => null);
-return "COOKIE_OK";
+      return "COOKIE_OK";
     })();
 
     try {
@@ -178,15 +216,13 @@ return "COOKIE_OK";
   }
 
   async function storeFetch<T>(path: string, init?: RequestInit, retry = true): Promise<T> {
-    const tok = "";
-
     const headers: Record<string, string> = {
       "x-ct-app": "store",
       ...(init?.headers ? (init.headers as any) : {}),
     };
 
     const code = String(storeCode ?? "").trim();
-    if (!tok && code) headers["x-store-code"] = code;
+    if (code) headers["x-store-code"] = code;
 
     const res = await fetch(apiUrl(path), {
       ...init,
@@ -197,13 +233,9 @@ return "COOKIE_OK";
     if (res.status === 401 && retry) {
       await refreshStoreSession();
 
-const headers2: Record<string, string> = {
-  ...headers,
-};
-
       const res2 = await fetch(apiUrl(path), {
         ...init,
-        headers: headers2,
+        headers,
         credentials: "include",
       });
 
@@ -255,12 +287,13 @@ const headers2: Record<string, string> = {
         throw new Error(txt || `Error ${res.status}`);
       }
 
-      const out = (await res.json()) as any;
-      const accessOk = await verifyStoreRole();
-if (!accessOk) return;
+      await res.json().catch(() => null);
 
-setAccessToken("COOKIE_AUTH");
-requestStorePushRegistration();
+      const accessOk = await verifyStoreRole();
+      if (!accessOk) return;
+
+      setAccessToken("COOKIE_AUTH");
+      requestStorePushRegistration(1000);
     } catch (e: any) {
       setLoginErr(e?.message ?? "No se pudo iniciar sesión");
     } finally {
