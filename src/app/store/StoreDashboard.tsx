@@ -294,6 +294,12 @@ export default function StoreDashboard() {
         updatedAt:
           payload?.updatedAt != null ? String(payload.updatedAt) : new Date().toISOString(),
       });
+
+      alerts.fireOperationalAlert(
+  "🛵 Conductor en tienda",
+  `${driverName} ya está esperando en tienda.`,
+  "DRIVER_ARRIVED"
+);
     }
 
     es.onmessage = async (event) => {
@@ -459,7 +465,7 @@ export default function StoreDashboard() {
       updatedAt: new Date().toISOString(),
     });
 
-    alerts.fireOperationalAlert("💳 Pago confirmado", body, "NEW_ORDER");
+    alerts.fireOperationalAlert("💳 Pago confirmado", body, "PAYMENT_CONFIRMED");
   }, [
     auth.authChecked,
     auth.accessToken,
@@ -500,7 +506,7 @@ export default function StoreDashboard() {
     orders.setSelectedOrderId(null);
 
     if (alerts.soundEnabled) {
-      void playSound("GENERIC", alerts.soundVolume);
+      void playSound("DRIVER_ARRIVED", alerts.soundVolume);
     }
   }, [
     auth.authChecked,

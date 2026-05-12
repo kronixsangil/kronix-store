@@ -17,6 +17,7 @@ import {
   saveSoundEnabled,
   saveSoundVolume,
   unlockAudio,
+  type StoreSoundId,
 } from "../lib/alerts/sound";
 
 type Props = {
@@ -27,7 +28,7 @@ type Props = {
   autoMinutes: number;
 };
 
-type OperationalSound = "NEW_ORDER" | "GENERIC" | "NONE";
+type OperationalSound = StoreSoundId | "NONE";
 
 export function useStoreAlerts({
   authChecked,
@@ -40,22 +41,15 @@ export function useStoreAlerts({
   const [soundVolume, setSoundVolumeState] = useState<number>(0.6);
   const [notifyEnabled, setNotifyEnabled] = useState<boolean>(false);
 
-  const prevWaitingIdsRef = useRef<Set<string>>(new Set());
   const timeoutWarnedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    const se = loadSoundEnabled(false);
-    setSoundEnabled(se);
-
-    const sv = loadSoundVolume(0.6);
-    setSoundVolumeState(sv);
-
-    const ne = loadNotifyEnabled(false);
-    setNotifyEnabled(ne);
+    setSoundEnabled(loadSoundEnabled(false));
+    setSoundVolumeState(loadSoundVolume(0.6));
+    setNotifyEnabled(loadNotifyEnabled(false));
   }, []);
 
   function resetAlertTracking() {
-    prevWaitingIdsRef.current = new Set();
     timeoutWarnedRef.current = new Set();
   }
 
@@ -72,38 +66,13 @@ export function useStoreAlerts({
     if (notifyEnabled && canNotify()) {
       notify(title, { body });
     }
-  }
 
-  useEffect(() => {
-    if (!authChecked) return;
-    if (!accessToken?.trim()) return;
-    if (!storeCode?.trim()) return;
-
-    const currentIds = new Set(waitingOrders.map((o) => o.id));
-    const prevIds = prevWaitingIdsRef.current;
-
-    const newIds: string[] = [];
-    for (const id of currentIds) {
-      if (!prevIds.has(id)) newIds.push(id);
-    }
-
-    prevWaitingIdsRef.current = currentIds;
-
-    if (!newIds.length) return;
-
-    if (soundEnabled) {
-      playSound("NEW_ORDER", soundVolume);
-    }
-
-    if (notifyEnabled && typeof document !== "undefined" && document.hidden) {
-      if (canNotify()) {
-        const first = waitingOrders.find((o) => o.id === newIds[0]) ?? null;
-        notify("🆕 Nuevo pedido", {
-          body: first?.dropoffAddress ? `Entrega: ${first.dropoffAddress}` : "Tienes un pedido pendiente.",
-        });
+    try {
+      if ("vibrate" in navigator) {
+        navigator.vibrate([120, 60, 120]);
       }
-    }
-  }, [waitingOrders, authChecked, accessToken, storeCode, soundEnabled, soundVolume, notifyEnabled]);
+    } catch {}
+  }
 
   useEffect(() => {
     if (!authChecked) return;
@@ -128,20 +97,14 @@ export function useStoreAlerts({
       if (remaining > 0 && remaining <= warnMs) {
         timeoutWarnedRef.current.add(id);
 
-        if (soundEnabled) {
-          playSound("GENERIC", Math.min(1, Math.max(0.2, soundVolume)));
-        }
-
-        if (notifyEnabled && typeof document !== "undefined" && document.hidden) {
-          if (canNotify()) {
-            notify("⏳ Pedido por vencer", {
-              body: `Faltan ~${Math.ceil(remaining / 1000)}s para auto-decisión.`,
-            });
-          }
-        }
+        fireOperationalAlert(
+          "⏳ Pedido por vencer",
+          `Faltan ~${Math.ceil(remaining / 1000)}s para auto-decisión.`,
+          "TIMEOUT_SOON"
+        );
       }
     }
-  }, [waitingOrders, autoMinutes, soundEnabled, soundVolume, notifyEnabled, authChecked, accessToken, storeCode]);
+  }, [waitingOrders, autoMinutes, authChecked, accessToken, storeCode, soundEnabled, soundVolume, notifyEnabled]);
 
   async function toggleSound() {
     const next = !soundEnabled;
@@ -167,11 +130,13 @@ export function useStoreAlerts({
 
     if (next) {
       const p = await requestNotifyPermission();
+
       if (p === "granted") {
         saveNotifyEnabled(true);
         setNotifyEnabled(true);
+
         notify("✅ Notificaciones activadas", {
-          body: "Te avisaremos de nuevos pedidos y timeouts.",
+          body: "Te avisaremos de nuevos pedidos, pagos y llegada de conductores.",
         });
       } else {
         saveNotifyEnabled(false);

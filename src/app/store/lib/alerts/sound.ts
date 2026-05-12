@@ -1,47 +1,40 @@
 // src/app/store/lib/alerts/sound.ts
 "use client";
 
-type SoundId = "NEW_ORDER" | "TIMEOUT_SOON" | "ASSIGNED" | "GENERIC";
+export type StoreSoundId =
+  | "NEW_ORDER"
+  | "PAYMENT_CONFIRMED"
+  | "ORDER_CANCELLED"
+  | "DRIVER_ARRIVED"
+  | "TIMEOUT_SOON"
+  | "GENERIC";
 
 const SOUND_ENABLED_KEY = "ct_store_sound_enabled_v1";
 const SOUND_VOLUME_KEY = "ct_store_sound_volume_v1";
 
-let audioCtx: AudioContext | null = null;
-let htmlAudioNewOrder: HTMLAudioElement | null = null;
-let htmlAudioNotify: HTMLAudioElement | null = null;
+const SOUND_SRC: Record<StoreSoundId, string> = {
+  NEW_ORDER: "/Sounds/store/new-order.mp3",
+  PAYMENT_CONFIRMED: "/Sounds/store/payment-confirmed.mp3",
+  ORDER_CANCELLED: "/Sounds/store/order-cancelled.mp3",
+  DRIVER_ARRIVED: "/Sounds/store/driver-arrived.mp3",
+  TIMEOUT_SOON: "/Sounds/store/general-alert.mp3",
+  GENERIC: "/Sounds/store/general-alert.mp3",
+};
 
-function getCtx(): AudioContext | null {
-  try {
-    const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
-    if (!Ctx) return null;
-    if (!audioCtx) audioCtx = new Ctx();
-    return audioCtx;
-  } catch {
-    return null;
-  }
-}
+const audioMap = new Map<StoreSoundId, HTMLAudioElement>();
 
-function getNewOrderAudio(): HTMLAudioElement | null {
+function getAudio(id: StoreSoundId): HTMLAudioElement | null {
   try {
     if (typeof window === "undefined") return null;
-    if (!htmlAudioNewOrder) {
-      htmlAudioNewOrder = new Audio("/Sounds/new-order.mp3");
-      htmlAudioNewOrder.preload = "auto";
-    }
-    return htmlAudioNewOrder;
-  } catch {
-    return null;
-  }
-}
 
-function getNotifyAudio(): HTMLAudioElement | null {
-  try {
-    if (typeof window === "undefined") return null;
-    if (!htmlAudioNotify) {
-      htmlAudioNotify = new Audio("/Sounds/notify.mp3");
-      htmlAudioNotify.preload = "auto";
-    }
-    return htmlAudioNotify;
+    const existing = audioMap.get(id);
+    if (existing) return existing;
+
+    const audio = new Audio(SOUND_SRC[id] || SOUND_SRC.GENERIC);
+    audio.preload = "auto";
+
+    audioMap.set(id, audio);
+    return audio;
   } catch {
     return null;
   }
@@ -81,33 +74,15 @@ export function saveSoundVolume(vol: number) {
   } catch {}
 }
 
-/**
- * Debe llamarse por click/tap del usuario para que el navegador permita audio.
- */
 export async function unlockAudio(): Promise<boolean> {
-  let unlocked = false;
+  let ok = false;
 
-  try {
-    const ctx = getCtx();
-    if (ctx) {
-      if (ctx.state === "suspended") await ctx.resume();
-
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      gain.gain.value = 0.00001;
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.02);
-      unlocked = true;
-    }
-  } catch {}
-
-  async function primeAudio(audio: HTMLAudioElement | null) {
-    if (!audio) return false;
+  for (const id of Object.keys(SOUND_SRC) as StoreSoundId[]) {
+    const audio = getAudio(id);
+    if (!audio) continue;
 
     try {
-      const prevVol = audio.volume;
+      const prevVolume = audio.volume;
       const prevMuted = audio.muted;
 
       audio.volume = 0.0001;
@@ -117,61 +92,27 @@ export async function unlockAudio(): Promise<boolean> {
       try {
         await audio.play();
         audio.pause();
+        ok = true;
       } catch {}
 
       audio.currentTime = 0;
-      audio.volume = prevVol;
+      audio.volume = prevVolume;
       audio.muted = prevMuted;
-      return true;
-    } catch {
-      return false;
-    }
+    } catch {}
   }
 
-  try {
-    const ok1 = await primeAudio(getNewOrderAudio());
-    const ok2 = await primeAudio(getNotifyAudio());
-    if (ok1 || ok2) unlocked = true;
-  } catch {}
-
-  return unlocked;
+  return ok;
 }
 
-function patternFor(id: SoundId) {
-  if (id === "NEW_ORDER") {
-    return [
-      { f: 880, ms: 200 },
-      { f: 660, ms: 180 },
-      { f: 950, ms: 240 },
-      { f: 660, ms: 180 },
-      { f: 880, ms: 400 },
-    ];
-  }
-  if (id === "TIMEOUT_SOON") {
-    return [
-      { f: 520, ms: 120 },
-      { f: 520, ms: 120 },
-    ];
-  }
-  if (id === "ASSIGNED") {
-    return [
-      { f: 990, ms: 120 },
-      { f: 990, ms: 120 },
-      { f: 740, ms: 160 },
-    ];
-  }
-  return [{ f: 700, ms: 120 }];
-}
-
-async function playHtmlAudio(
-  audio: HTMLAudioElement | null,
-  volume?: number
-): Promise<boolean> {
+export async function playSound(id: StoreSoundId, volume?: number) {
   try {
-    if (!audio) return false;
+    const audio = getAudio(id);
+    if (!audio) return;
 
     const vol =
-      typeof volume === "number" ? Math.max(0, Math.min(1, volume)) : loadSoundVolume(0.6);
+      typeof volume === "number"
+        ? Math.max(0, Math.min(1, volume))
+        : loadSoundVolume(0.6);
 
     audio.pause();
     audio.currentTime = 0;
@@ -179,64 +120,7 @@ async function playHtmlAudio(
     audio.volume = vol;
 
     await audio.play();
-    return true;
   } catch {
-    return false;
+    // Algunos navegadores requieren interacción previa.
   }
-}
-
-async function playSynthSound(id: SoundId, volume?: number) {
-  const ctx = getCtx();
-  if (!ctx) return;
-
-  try {
-    if (ctx.state === "suspended") await ctx.resume();
-
-    const vol =
-      typeof volume === "number" ? Math.max(0, Math.min(1, volume)) : loadSoundVolume(0.6);
-
-    const steps = patternFor(id);
-
-    let t = ctx.currentTime + 0.01;
-
-    for (const s of steps) {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = "sine";
-      osc.frequency.value = s.f;
-
-      gain.gain.setValueAtTime(0.00001, t);
-      gain.gain.exponentialRampToValueAtTime(Math.max(0.00001, vol), t + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.00001, t + s.ms / 1000);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.start(t);
-      osc.stop(t + s.ms / 1000);
-
-      t += s.ms / 1000 + 0.03;
-    }
-  } catch {
-    // silencioso
-  }
-}
-
-export async function playSound(id: SoundId, volume?: number) {
-  if (id === "NEW_ORDER") {
-    const played = await playHtmlAudio(getNewOrderAudio(), volume);
-    if (played) return;
-    await playSynthSound(id, volume);
-    return;
-  }
-
-  if (id === "GENERIC" || id === "TIMEOUT_SOON" || id === "ASSIGNED") {
-    const played = await playHtmlAudio(getNotifyAudio(), volume);
-    if (played) return;
-    await playSynthSound(id, volume);
-    return;
-  }
-
-  await playSynthSound(id, volume);
 }

@@ -23,6 +23,7 @@ export async function requestNotifyPermission(): Promise<NotificationPermission 
   try {
     if (typeof window === "undefined") return "unsupported";
     if (!("Notification" in window)) return "unsupported";
+
     const p = await Notification.requestPermission();
     return p;
   } catch {
@@ -34,6 +35,7 @@ export function canNotify(): boolean {
   try {
     if (typeof window === "undefined") return false;
     if (!("Notification" in window)) return false;
+
     return Notification.permission === "granted";
   } catch {
     return false;
@@ -43,7 +45,21 @@ export function canNotify(): boolean {
 export function notify(title: string, options?: NotificationOptions) {
   try {
     if (!canNotify()) return;
-    new Notification(title, options);
+
+    // Si la Store App está visible, NO mostramos notificación del sistema.
+    // Así evitamos que suene el tono del sistema y dejamos sonar el MP3 interno.
+    if (typeof document !== "undefined" && document.visibilityState === "visible") {
+      return;
+    }
+
+    const finalOptions: NotificationOptions = {
+  icon: "/icons/icon-192.png",
+  badge: "/icons/icon-192.png",
+  tag: "kronix-store",
+  ...options,
+};
+
+new Notification(title, finalOptions);
   } catch {
     // ignore
   }
