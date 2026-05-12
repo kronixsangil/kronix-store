@@ -66,13 +66,13 @@ function HeaderTabBtn({
       onClick={onClick}
       title={label}
       className={[
-        "group relative flex h-[64px] w-[82px] shrink-0 items-center justify-center rounded-[20px] transition",
+        "group relative flex h-[50px] w-[64px] shrink-0 items-center justify-center rounded-[20px] transition",
         active
           ? "bg-white shadow-[0_10px_24px_rgba(15,23,42,0.22)] ring-1 ring-white/80"
           : "bg-transparent hover:bg-white/10",
       ].join(" ")}
     >
-      <span className="relative block h-[48px] w-[48px] transition group-hover:scale-[1.06]">
+      <span className="relative block h-[38px] w-[38px] transition group-hover:scale-[1.06]">
         <Image
           src={image}
           alt={label}
@@ -115,10 +115,10 @@ export default function StoreDashboardHeader({
 
   return (
     <div className="overflow-hidden rounded-[18px] border border-slate-200 bg-[#262633] shadow-[0_10px_26px_rgba(15,23,42,0.06)]">
-      <div className="px-4 py-2.5">
-        <div className="grid gap-3 xl:grid-cols-[230px_minmax(0,1fr)_280px] xl:items-center">
+      <div className="px-3 py-1.5">
+        <div className="grid grid-cols-[170px_minmax(0,1fr)_245px] items-center gap-2">
           <div className="relative flex min-w-0 items-center">
-            <div className="relative h-[58px] w-[172px] shrink-0">
+            <div className="relative h-[46px] w-[136px] shrink-0">
               <Image
                 src="/branding/kronix/header-logo.png"
                 alt="KroniX"
@@ -128,7 +128,7 @@ export default function StoreDashboardHeader({
               />
             </div>
 
-            <div className="pointer-events-none absolute left-[128px] top-[43px] text-[17px] font-bold leading-none text-gray-100">
+            <div className="pointer-events-none absolute left-[102px] top-[34px] text-[13px] font-bold leading-none text-gray-100">
               {cityShort}
             </div>
           </div>
@@ -148,8 +148,8 @@ export default function StoreDashboardHeader({
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <div className="flex h-16 items-center gap-2 rounded-full bg-slate-50 px-1 py-1 ring-1 ring-slate-200">
-              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200">
+            <div className="flex h-[50px] items-center gap-2 rounded-full bg-slate-50 px-1 py-1 ring-1 ring-slate-200">
+              <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200">
                 {storeImageUrl ? (
                   <Image src={storeImageUrl} alt={storeName} fill className="object-cover" />
                 ) : (
@@ -159,7 +159,7 @@ export default function StoreDashboardHeader({
                 )}
               </div>
 
-              <div className="flex h-12 w-[138px] items-center pr-2">
+              <div className="flex h-10 w-[128px] items-center pr-2">
                 <div
                   className={[
                     "flex min-h-[2.3rem] w-full items-center overflow-hidden text-left font-extrabold text-slate-800 break-words [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical]",
@@ -191,7 +191,7 @@ export default function StoreDashboardHeader({
 
             <button
               onClick={onLogout}
-              className="grid h-14 w-14 place-items-center rounded-full bg-[#262633] text-[30px] font-black text-red-500 ring-1 ring-red-200 transition hover:bg-red-100"
+              className="grid h-[50px] w-[50px] place-items-center rounded-full bg-[#262633] text-[30px] font-black text-red-500 ring-1 ring-red-200 transition hover:bg-red-100"
               title="Cerrar sesión"
             >
               ⏻
