@@ -66,20 +66,29 @@ function HeaderTabBtn({
       onClick={onClick}
       title={label}
       className={[
-        "group relative flex h-[50px] w-[64px] shrink-0 items-center justify-center rounded-[20px] transition",
+        "group relative flex h-[54px] w-[74px] shrink-0 flex-col items-center justify-center rounded-[18px] transition",
         active
-          ? "bg-white shadow-[0_10px_24px_rgba(15,23,42,0.22)] ring-1 ring-white/80"
+          ? "bg-white shadow-[0_10px_24px_rgba(15,23,42,0.24)] ring-1 ring-white/80"
           : "bg-transparent hover:bg-white/10",
       ].join(" ")}
     >
-      <span className="relative block h-[38px] w-[38px] transition group-hover:scale-[1.06]">
+      <span className="relative block h-[34px] w-[34px] transition group-hover:scale-[1.06]">
         <Image
           src={image}
           alt={label}
           fill
           className="object-contain drop-shadow-[0_5px_8px_rgba(0,0,0,0.35)]"
-          sizes="48px"
+          sizes="34px"
         />
+      </span>
+
+      <span
+        className={[
+          "mt-0.5 text-[9px] font-black leading-none",
+          active ? "text-slate-800" : "text-white/85",
+        ].join(" ")}
+      >
+        {label}
       </span>
     </button>
   );
@@ -88,12 +97,12 @@ function HeaderTabBtn({
 function getStoreNameTextClass(storeName: string) {
   const len = String(storeName ?? "").trim().length;
 
-  if (len <= 10) return "text-[20px] leading-[1.15rem]";
-  if (len <= 16) return "text-[17px] leading-[1.1rem]";
-  if (len <= 24) return "text-[14px] leading-[1.05rem]";
-  if (len <= 32) return "text-[12px] leading-[1rem]";
+  if (len <= 10) return "text-[18px] leading-[1rem]";
+  if (len <= 16) return "text-[16px] leading-[0.98rem]";
+  if (len <= 24) return "text-[13px] leading-[0.95rem]";
+  if (len <= 32) return "text-[11px] leading-[0.9rem]";
 
-  return "text-[11px] leading-[0.95rem]";
+  return "text-[10px] leading-[0.86rem]";
 }
 
 export default function StoreDashboardHeader({
@@ -114,11 +123,11 @@ export default function StoreDashboardHeader({
   const storeNameTextClass = getStoreNameTextClass(storeName);
 
   return (
-    <div className="overflow-hidden rounded-[18px] border border-slate-200 bg-[#262633] shadow-[0_10px_26px_rgba(15,23,42,0.06)]">
+    <div className="overflow-hidden rounded-[18px] border border-slate-200 bg-[linear-gradient(135deg,#141827_0%,#202436_45%,#262633_100%)] shadow-[0_10px_26px_rgba(15,23,42,0.08)]">
       <div className="px-3 py-1.5">
-        <div className="grid grid-cols-[170px_minmax(0,1fr)_245px] items-center gap-2">
+        <div className="grid grid-cols-[190px_minmax(0,1fr)_270px] items-center gap-2">
           <div className="relative flex min-w-0 items-center">
-            <div className="relative h-[46px] w-[136px] shrink-0">
+            <div className="relative h-[54px] w-[168px] shrink-0">
               <Image
                 src="/branding/kronix/header-logo.png"
                 alt="KroniX"
@@ -128,13 +137,13 @@ export default function StoreDashboardHeader({
               />
             </div>
 
-            <div className="pointer-events-none absolute left-[102px] top-[34px] text-[13px] font-bold leading-none text-gray-100">
+            <div className="pointer-events-none absolute left-[118px] top-[39px] text-[12px] font-bold leading-none text-gray-100">
               {cityShort}
             </div>
           </div>
 
           <div className="flex min-w-0 items-center justify-center">
-            <div className="grid w-full max-w-[450px] grid-cols-5 gap-1.5">
+            <div className="grid w-full max-w-[470px] grid-cols-5 gap-1.5">
               {HEADER_TABS.map((item) => (
                 <HeaderTabBtn
                   key={item.key}
@@ -147,22 +156,22 @@ export default function StoreDashboardHeader({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <div className="flex h-[50px] items-center gap-2 rounded-full bg-slate-50 px-1 py-1 ring-1 ring-slate-200">
-              <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200">
+          <div className="flex min-w-0 items-center justify-end gap-2">
+            <div className="flex h-[48px] min-w-0 flex-1 items-center gap-2 rounded-full bg-slate-50 px-1.5 py-1 ring-1 ring-slate-200">
+              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200">
                 {storeImageUrl ? (
                   <Image src={storeImageUrl} alt={storeName} fill className="object-cover" />
                 ) : (
-                  <div className="grid h-full w-full place-items-center text-[13px] text-slate-700">
+                  <div className="grid h-full w-full place-items-center text-[12px] text-slate-700">
                     {storeIcon}
                   </div>
                 )}
               </div>
 
-              <div className="flex h-10 w-[128px] items-center pr-2">
+              <div className="flex h-10 min-w-0 flex-1 items-center pr-2">
                 <div
                   className={[
-                    "flex min-h-[2.3rem] w-full items-center overflow-hidden text-left font-extrabold text-slate-800 break-words [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical]",
+                    "flex min-h-[2rem] w-full items-center overflow-hidden text-left font-extrabold text-slate-800 break-words [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical]",
                     storeNameTextClass,
                   ].join(" ")}
                   title={storeName}
@@ -173,7 +182,7 @@ export default function StoreDashboardHeader({
             </div>
 
             {!(LOCK_STORE_AFTER_LOGIN && accessToken?.trim()) ? (
-              <div className="flex items-center gap-2 rounded-full bg-slate-50 px-2 py-1.5 ring-1 ring-slate-200">
+              <div className="flex shrink-0 items-center gap-2 rounded-full bg-slate-50 px-2 py-1.5 ring-1 ring-slate-200">
                 <input
                   value={inputStoreCode}
                   onChange={(e) => setInputStoreCode(e.target.value)}
@@ -191,7 +200,7 @@ export default function StoreDashboardHeader({
 
             <button
               onClick={onLogout}
-              className="grid h-[50px] w-[50px] place-items-center rounded-full bg-[#262633] text-[30px] font-black text-red-500 ring-1 ring-red-200 transition hover:bg-red-100"
+              className="grid h-[48px] w-[48px] shrink-0 place-items-center rounded-full bg-[#202436] text-[26px] font-black text-red-500 ring-1 ring-red-200 transition hover:bg-red-100"
               title="Cerrar sesión"
             >
               ⏻
