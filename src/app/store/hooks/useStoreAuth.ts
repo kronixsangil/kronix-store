@@ -60,6 +60,16 @@ export function useStoreAuth() {
 
   const refreshingRef = useRef<Promise<string> | null>(null);
 
+  function requestStorePushRegistration() {
+  try {
+    if (typeof window === "undefined") return;
+
+    window.setTimeout(() => {
+      window.dispatchEvent(new Event("kronix-store-auth-ready"));
+    }, 800);
+  } catch {}
+}
+
   useEffect(() => {
     const saved = loadStoreCode();
     setStoreCode(saved);
@@ -250,6 +260,7 @@ const headers2: Record<string, string> = {
 if (!accessOk) return;
 
 setAccessToken("COOKIE_AUTH");
+requestStorePushRegistration();
     } catch (e: any) {
       setLoginErr(e?.message ?? "No se pudo iniciar sesión");
     } finally {

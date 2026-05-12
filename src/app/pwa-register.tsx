@@ -53,7 +53,7 @@ async function registerStorePush() {
     });
   }
 
-  await fetch("/api/store/push/subscribe", {
+  const res = await fetch("/api/store/push/subscribe", {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -63,6 +63,12 @@ async function registerStorePush() {
       userAgent: navigator.userAgent,
     }),
   });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    console.error("[Store Push] subscribe failed:", res.status, text);
+    return false;
+  }
 
   console.log("[Store Push] Suscripción registrada correctamente");
   return true;
@@ -96,7 +102,21 @@ function playForegroundStorePushSound(payload: any) {
 
 export default function PwaRegister() {
   const registeredRef = useRef(false);
-  const triesRef = useRef(0);
+  const registeringRef = useRef(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!("serviceWorker" in navigator)) return;
+
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then(() => {
+        console.log("[Store PWA] Service Worker registrado");
+      })
+      .catch((err) => {
+        console.error("[Store PWA] Error registrando SW:", err);
+      });
+  }, []);
 
   useEffect(() => {
     const onServiceWorkerMessage = (event: MessageEvent) => {
@@ -112,35 +132,27 @@ export default function PwaRegister() {
   }, []);
 
   useEffect(() => {
-    let alive = true;
-    let timer: ReturnType<typeof setTimeout> | null = null;
+    const onAuthReady = async () => {
+      if (registeredRef.current || registeringRef.current) return;
 
-    const tryRegister = async () => {
-      if (!alive || registeredRef.current) return;
-
-      triesRef.current += 1;
+      registeringRef.current = true;
 
       try {
         const ok = await registerStorePush();
-
         if (ok) {
           registeredRef.current = true;
-          return;
         }
       } catch (err) {
-        console.warn("[Store Push] No se pudo registrar todavía:", err);
-      }
-
-      if (!registeredRef.current && triesRef.current < 12) {
-        timer = setTimeout(tryRegister, 5000);
+        console.warn("[Store Push] No se pudo registrar:", err);
+      } finally {
+        registeringRef.current = false;
       }
     };
 
-    timer = setTimeout(tryRegister, 1500);
+    window.addEventListener("kronix-store-auth-ready", onAuthReady);
 
     return () => {
-      alive = false;
-      if (timer) clearTimeout(timer);
+      window.removeEventListener("kronix-store-auth-ready", onAuthReady);
     };
   }, []);
 
