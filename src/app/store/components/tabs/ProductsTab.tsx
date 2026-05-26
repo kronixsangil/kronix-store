@@ -259,7 +259,7 @@ export default function ProductsTab({
         </div>
       ) : null}
 
-      <div className="grid items-start gap-2 xl:grid-cols-[1.15fr_0.85fr]">
+      <div className="grid grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)] items-start gap-2">
         {/* COLUMNA IZQUIERDA */}
         <div className="min-w-0">
           <div className="rounded-[18px] border border-white/70 bg-white/70 px-4 py-3">

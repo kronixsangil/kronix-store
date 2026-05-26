@@ -109,7 +109,7 @@ export default function SettingsTab({
         </div>
       </div>
 
-      <div className="mt-3 grid h-[540px] gap-3 xl:grid-cols-2">
+      <div className="mt-3 grid h-[540px] grid-cols-2 gap-3">
         <div className="space-y-2">
           <SectionCard
             title="Auto-decisión operativa"
@@ -124,7 +124,7 @@ export default function SettingsTab({
               </button>
             }
           >
-            <div className="grid gap-2 md:grid-cols-[1.25fr_0.75fr]">
+            <div className="grid grid-cols-[1.25fr_0.75fr] gap-2">
               <FieldBox label="Modo de auto-decisión">
                 <select
                   value={autoMode}
@@ -163,7 +163,7 @@ export default function SettingsTab({
             }
           >
             <div className="grid gap-2">
-              <div className="grid gap-2 md:grid-cols-2">
+              <div className="grid grid-cols-2 gap-2">
                 <Toggle
                   label="Sonido de pedidos"
                   desc="Activa o desactiva el sonido cuando entren nuevas órdenes."
@@ -219,7 +219,7 @@ export default function SettingsTab({
             desc="Define cómo se imprime el ticket y qué información se muestra."
           >
             <div className="grid gap-2">
-              <div className="grid gap-2 md:grid-cols-[1.05fr_0.95fr]">
+              <div className="grid grid-cols-[1.05fr_0.95fr] gap-2">
                 <FieldBox
                   label="Tamaño de papel"
                   helper="80mm suele dar mejor lectura y más comodidad en impresión."
@@ -243,7 +243,7 @@ export default function SettingsTab({
                 />
               </div>
 
-              <div className="grid gap-2 md:grid-cols-2">
+              <div className="grid grid-cols-2 gap-2">
                 <Toggle
                   label="Mostrar logo KroniX"
                   value={printPrefs.showLogo}

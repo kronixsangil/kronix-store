@@ -103,7 +103,7 @@ export default function ProfileTab({
         </div>
 
         <div className="flex-1 rounded-[22px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.84)_0%,rgba(248,250,252,0.94)_100%)] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-3 gap-3">
             <ProfileBox label="Tienda" value={storeName} />
 
             <div className="rounded-[16px] border border-slate-200 bg-white/94 p-4 shadow-[0_6px_16px_rgba(15,23,42,0.035)]">

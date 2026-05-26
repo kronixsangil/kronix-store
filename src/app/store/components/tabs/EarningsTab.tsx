@@ -195,7 +195,7 @@ export default function EarningsTab({
 
       <div className="ct-scroll-y mt-3 min-h-0 flex-1 pr-1">
         <div className="space-y-3">
-          <div className="grid gap-2 xl:grid-cols-4">
+          <div className="grid grid-cols-4 gap-2">
             <StatCard
               label="Ganancia total"
               value={formatCOP(Math.round(earnings.storePayout))}
@@ -224,7 +224,7 @@ export default function EarningsTab({
             />
           </div>
 
-          <div className="grid gap-2 xl:grid-cols-[420px_minmax(0,1fr)]">
+          <div className="grid grid-cols-[390px_minmax(0,1fr)] gap-2">
             <div className="ct-card p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
