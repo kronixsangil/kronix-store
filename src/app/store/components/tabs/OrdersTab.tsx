@@ -413,155 +413,119 @@ export default function OrdersTab({
   }
 
   return (
-    <div className="ct-tab-frame grid h-full min-h-0 gap-2 grid-cols-[210px_minmax(0,1fr)]">
-      <aside className="rounded-[20px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(248,250,252,0.96)_100%)] p-3 shadow-[0_10px_22px_rgba(15,23,42,0.06)]">
-        <div className="flex h-full min-h-[470px] flex-col">
-          <div className="text-[9px] font-extrabold uppercase tracking-[0.20em] text-slate-400">Órdenes</div>
-          <div className="mt-2 text-[16px] font-black leading-none text-slate-900">Vista operativa</div>
-
-          <div className="mt-4 space-y-2">
-            <StageSidebarBtn
-              active={activeStage === "PENDING"}
-              label="Pendientes"
-              count={pendingOrders.length}
-              stage="PENDING"
-              onClick={() => changeStage("PENDING")}
-            />
-            <StageSidebarBtn
-              active={activeStage === "PREPARING"}
-              label="En preparación"
-              count={preparingOrders.length}
-              stage="PREPARING"
-              onClick={() => changeStage("PREPARING")}
-            />
-            <StageSidebarBtn
-              active={activeStage === "EN_ROUTE"}
-              label="En ruta"
-              count={enRouteOrders.length}
-              stage="EN_ROUTE"
-              onClick={() => changeStage("EN_ROUTE")}
-            />
-            <StageSidebarBtn
-              active={activeStage === "DELIVERED"}
-              label="Entregadas"
-              count={deliveredOrders.length}
-              stage="DELIVERED"
-              onClick={() => changeStage("DELIVERED")}
-            />
-          </div>
-
-          <div className="mt-3 flex flex-col gap-2">
-            {storeCity.hasCity ? <SmallChip tone="softBlue">📍 {storeCity.cityLabel}</SmallChip> : null}
-            <SmallChip tone="softSlate">{loading ? "Actualizando…" : `${ordersList.length} visibles`}</SmallChip>
-          </div>
-
-          <div className="mt-3 grid gap-2">
-            <StatePill
-              active={storeStateUI === "ACTIVE"}
-              onClick={() => saveStoreOperationalState("ACTIVE")}
-              variant="green"
-            >
-              {savingStoreState && storeStateUI !== "ACTIVE" ? "Guardando..." : "Tienda activa"}
-            </StatePill>
-
-            <StatePill
-              active={storeStateUI === "PAUSED"}
-              onClick={() => saveStoreOperationalState("PAUSED")}
-              variant="yellow"
-            >
-              {savingStoreState && storeStateUI !== "PAUSED" ? "Guardando..." : "En pausa"}
-            </StatePill>
-
-            <StatePill
-              active={storeStateUI === "INACTIVE"}
-              onClick={() => saveStoreOperationalState("INACTIVE")}
-              variant="red"
-            >
-              {savingStoreState && storeStateUI !== "INACTIVE" ? "Guardando..." : "Inactiva"}
-            </StatePill>
-
-            <button
-              type="button"
-              onClick={onRefresh}
-              className="inline-flex h-8 items-center justify-center rounded-full bg-slate-900 px-4 text-[12px] font-extrabold text-white transition hover:bg-slate-800"
-            >
-              Refrescar
-            </button>
-          </div>
-
-          <div className="mt-auto rounded-[14px] border border-slate-200 bg-white/85 px-3 py-3 text-[11px] font-medium leading-snug text-slate-500">
-            Usa este panel para cambiar de etapa y operar la tienda sin salir del tablero.
-          </div>
+  <div className="ct-tab-frame grid h-full min-h-0 grid-cols-[20%_30%_50%] gap-2 overflow-hidden">
+    <aside className="min-h-0 rounded-[20px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(248,250,252,0.96)_100%)] p-3 shadow-[0_10px_22px_rgba(15,23,42,0.06)]">
+      <div className="h-full min-h-0 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="text-[9px] font-extrabold uppercase tracking-[0.20em] text-slate-400">
+          Órdenes
         </div>
-      </aside>
+        <div className="mt-2 text-[16px] font-black leading-none text-slate-900">
+          Vista operativa
+        </div>
 
-      <section className="min-h-0 rounded-[20px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.72)_0%,rgba(248,250,252,0.85)_100%)] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
-        <div className="grid h-full min-h-0 gap-2 grid-cols-[320px_minmax(0,1fr)]">
-          <div
-            className={[
-              "flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[18px] border border-white/60 shadow-[0_10px_20px_rgba(15,23,42,0.055)]",
-              stageTone.shell,
-            ].join(" ")}
+        <div className="mt-4 space-y-2">
+          <StageSidebarBtn active={activeStage === "PENDING"} label="Pendientes" count={pendingOrders.length} stage="PENDING" onClick={() => changeStage("PENDING")} />
+          <StageSidebarBtn active={activeStage === "PREPARING"} label="En preparación" count={preparingOrders.length} stage="PREPARING" onClick={() => changeStage("PREPARING")} />
+          <StageSidebarBtn active={activeStage === "EN_ROUTE"} label="En ruta" count={enRouteOrders.length} stage="EN_ROUTE" onClick={() => changeStage("EN_ROUTE")} />
+          <StageSidebarBtn active={activeStage === "DELIVERED"} label="Entregadas" count={deliveredOrders.length} stage="DELIVERED" onClick={() => changeStage("DELIVERED")} />
+        </div>
+
+        <div className="mt-3 flex flex-col gap-2">
+          {storeCity.hasCity ? <SmallChip tone="softBlue">📍 {storeCity.cityLabel}</SmallChip> : null}
+          <SmallChip tone="softSlate">{loading ? "Actualizando…" : `${ordersList.length} visibles`}</SmallChip>
+        </div>
+
+        <div className="mt-3 grid gap-2">
+          <StatePill active={storeStateUI === "ACTIVE"} onClick={() => saveStoreOperationalState("ACTIVE")} variant="green">
+            {savingStoreState && storeStateUI !== "ACTIVE" ? "Guardando..." : "Tienda activa"}
+          </StatePill>
+
+          <StatePill active={storeStateUI === "PAUSED"} onClick={() => saveStoreOperationalState("PAUSED")} variant="yellow">
+            {savingStoreState && storeStateUI !== "PAUSED" ? "Guardando..." : "En pausa"}
+          </StatePill>
+
+          <StatePill active={storeStateUI === "INACTIVE"} onClick={() => saveStoreOperationalState("INACTIVE")} variant="red">
+            {savingStoreState && storeStateUI !== "INACTIVE" ? "Guardando..." : "Inactiva"}
+          </StatePill>
+
+          <button
+            type="button"
+            onClick={onRefresh}
+            className="inline-flex h-8 items-center justify-center rounded-full bg-slate-900 px-4 text-[12px] font-extrabold text-white transition hover:bg-slate-800"
           >
-            <div className={`bg-gradient-to-r ${stageTone.header} px-4 py-3 text-white`}>
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-[17px] font-black leading-none">{stageTitle}</div>
-                <div className="rounded-full bg-white/20 px-3 py-1 text-sm font-extrabold">
-                  {stageOrders.length}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex-1 min-h-0 p-3">
-              <div className="ct-scroll-y flex h-full min-h-0 flex-col gap-3 pr-1">
-                {loading ? (
-                  <div className="rounded-[16px] border border-dashed border-slate-200 bg-white/75 px-6 py-10 text-center">
-                    <div className="text-[15px] font-black text-slate-700">Actualizando órdenes…</div>
-                  </div>
-                ) : !stageOrders.length ? (
-                  <EmptyStage title={stageTitle} cityName={storeCity.cityName} />
-                ) : (
-                  stageOrders.map((order) => (
-                    <OrderCard
-                      key={order.id}
-                      order={order}
-                      active={selectedOrderId === order.id}
-                      onClick={() => {
-                        markManualInteraction();
-                        setSelectedOrderId(order.id);
-                      }}
-                      storeCode={storeCode}
-                      stage={activeStage}
-                    />
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-
-          <aside className="min-h-0 min-w-0 overflow-hidden rounded-[18px] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.99)_100%)] p-3 shadow-[0_16px_34px_rgba(15,23,42,0.12)]">
-            {!selectedOrderId || !selectedOrder ? (
-              <EmptySelection />
-            ) : (
-              <div className="ct-scroll-y h-full min-h-0 pr-1">
-                <OrderDetail
-                  order={selectedOrder}
-                  storeCode={storeCode}
-                  busyId={busyId}
-                  rejectReasonByOrderId={rejectReasonByOrderId}
-                  setRejectReasonByOrderId={setRejectReasonByOrderId}
-                  openByOrderId={openByOrderId}
-                  setOpenByOrderId={setOpenByOrderId}
-                  onConfirm={onConfirm}
-                  onReject={onReject}
-                  onPreparing={onPreparing}
-                  printing={printingId === selectedOrder.id}
-                />
-              </div>
-            )}
-          </aside>
+            Refrescar
+          </button>
         </div>
-      </section>
-    </div>
-  );
+
+        <div className="mt-3 rounded-[14px] border border-slate-200 bg-white/85 px-3 py-3 text-[11px] font-medium leading-snug text-slate-500">
+          Usa este panel para cambiar de etapa y operar la tienda sin salir del tablero.
+        </div>
+      </div>
+    </aside>
+
+    <section
+      className={[
+        "flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[18px] border border-white/60 shadow-[0_10px_20px_rgba(15,23,42,0.055)]",
+        stageTone.shell,
+      ].join(" ")}
+    >
+      <div className={`bg-gradient-to-r ${stageTone.header} px-4 py-3 text-white`}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-[17px] font-black leading-none">{stageTitle}</div>
+          <div className="rounded-full bg-white/20 px-3 py-1 text-sm font-extrabold">
+            {stageOrders.length}
+          </div>
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto p-3 pr-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex flex-col gap-3">
+          {loading ? (
+            <div className="rounded-[16px] border border-dashed border-slate-200 bg-white/75 px-6 py-10 text-center">
+              <div className="text-[15px] font-black text-slate-700">Actualizando órdenes…</div>
+            </div>
+          ) : !stageOrders.length ? (
+            <EmptyStage title={stageTitle} cityName={storeCity.cityName} />
+          ) : (
+            stageOrders.map((order) => (
+              <OrderCard
+                key={order.id}
+                order={order}
+                active={selectedOrderId === order.id}
+                onClick={() => {
+                  markManualInteraction();
+                  setSelectedOrderId(order.id);
+                }}
+                storeCode={storeCode}
+                stage={activeStage}
+              />
+            ))
+          )}
+        </div>
+      </div>
+    </section>
+
+    <aside className="min-h-0 min-w-0 overflow-hidden rounded-[18px] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.99)_100%)] p-3 shadow-[0_16px_34px_rgba(15,23,42,0.12)]">
+      {!selectedOrderId || !selectedOrder ? (
+        <EmptySelection />
+      ) : (
+        <div className="h-full min-h-0 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <OrderDetail
+            order={selectedOrder}
+            storeCode={storeCode}
+            busyId={busyId}
+            rejectReasonByOrderId={rejectReasonByOrderId}
+            setRejectReasonByOrderId={setRejectReasonByOrderId}
+            openByOrderId={openByOrderId}
+            setOpenByOrderId={setOpenByOrderId}
+            onConfirm={onConfirm}
+            onReject={onReject}
+            onPreparing={onPreparing}
+            printing={printingId === selectedOrder.id}
+          />
+        </div>
+      )}
+    </aside>
+  </div>
+);
 }
