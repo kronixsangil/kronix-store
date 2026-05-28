@@ -66,16 +66,16 @@ export default function StoreAuthScreen({
   backToLogin,
 }: Props) {
   return (
-    <main className="min-h-screen ct-store-bg">
+    <main className="h-screen min-h-screen overflow-y-auto ct-store-bg [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <div className="mx-auto w-full max-w-[1240px] px-3 py-3 sm:px-4">
-        <div className="overflow-hidden rounded-[22px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(248,250,252,0.95)_100%)] shadow-[0_20px_60px_rgba(15,23,42,0.10)] backdrop-blur">
+        <div className="overflow-visible rounded-[22px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(248,250,252,0.95)_100%)] shadow-[0_20px_60px_rgba(15,23,42,0.10)] backdrop-blur">
           <div className="relative">
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-slate-50/70 via-white/20 to-slate-100/40" />
             <div className="pointer-events-none absolute inset-0 opacity-[0.42] [background:radial-gradient(700px_circle_at_16%_18%,rgba(16,185,129,0.13),transparent_42%),radial-gradient(820px_circle_at_82%_24%,rgba(37,99,235,0.12),transparent_42%),radial-gradient(760px_circle_at_58%_92%,rgba(15,23,42,0.07),transparent_52%)]" />
 
-            <div className="relative min-h-screen px-3 py-3 sm:px-4 sm:py-4 lg:min-h-[calc(100vh-32px)]">
-              <div className="grid w-full gap-4 lg:grid-cols-[1.08fr_0.92fr] lg:gap-5">
-                <section className="order-2 rounded-[28px] border border-slate-200/80 bg-white/78 p-5 shadow-[0_10px_26px_rgba(15,23,42,0.05)] backdrop-blur sm:p-7 lg:order-1">
+            <div className="relative min-h-[calc(100vh-24px)] px-3 py-3 sm:px-4 sm:py-4">
+              <div className="grid w-full min-w-[760px] grid-cols-[60%_40%] gap-4 lg:gap-5">
+                <section className="rounded-[28px] border border-slate-200/80 bg-white/78 p-5 shadow-[0_10px_26px_rgba(15,23,42,0.05)] backdrop-blur sm:p-7">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
                     <div className="relative h-[64px] w-[210px] shrink-0 sm:h-[72px] sm:w-[220px]">
                       <Image
@@ -154,7 +154,7 @@ export default function StoreAuthScreen({
                   </div>
                 </section>
 
-                <section className="order-1 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.05)] lg:order-2">
+                <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.05)]">
                   <div className="p-5 sm:p-8">
                     {authView === "LOGIN" ? (
                       <>

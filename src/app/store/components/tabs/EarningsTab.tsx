@@ -193,7 +193,7 @@ export default function EarningsTab({
         </div>
       </div>
 
-      <div className="ct-scroll-y mt-3 min-h-0 flex-1 pr-1">
+      <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="space-y-3">
           <div className="grid grid-cols-4 gap-2">
             <StatCard
@@ -224,7 +224,7 @@ export default function EarningsTab({
             />
           </div>
 
-          <div className="grid grid-cols-[390px_minmax(0,1fr)] gap-2">
+          <div className="grid grid-cols-[390px_minmax(0,1fr)] items-start gap-2">
             <div className="ct-card p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>

@@ -259,7 +259,7 @@ export default function ProductsTab({
         </div>
       ) : null}
 
-      <div className="grid grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)] items-start gap-2">
+      <div className="grid h-full min-h-0 grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)] items-start gap-2 overflow-hidden">
         {/* COLUMNA IZQUIERDA */}
         <div className="min-w-0">
           <div className="rounded-[18px] border border-white/70 bg-white/70 px-4 py-3">
@@ -308,7 +308,7 @@ export default function ProductsTab({
               />
             </div>
 
-            <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
+            <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {loading ? (
                 <div className="rounded-[16px] border border-slate-200 bg-slate-50 px-4 py-6 text-[13px] font-semibold text-slate-600">
                   Cargando productos...
@@ -447,7 +447,7 @@ export default function ProductsTab({
               </button>
             </div>
 
-            <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-2">
+            <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div className="grid gap-2">
                 <div className="grid gap-2 md:grid-cols-2">
                   <div className="rounded-[14px] border border-slate-200 bg-white px-3 py-3">

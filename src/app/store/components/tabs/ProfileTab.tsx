@@ -73,7 +73,7 @@ export default function ProfileTab({
 
   return (
     <>
-      <div className="ct-tab-frame flex flex-col gap-3">
+      <div className="ct-tab-frame flex h-full min-h-0 flex-col gap-3 overflow-hidden">
         <div className="rounded-[20px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(248,250,252,0.97)_100%)] p-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)]">
           <div className="flex items-center gap-4">
             <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-white ring-1 ring-slate-200 shadow-[0_8px_20px_rgba(15,23,42,0.08)]">
@@ -102,7 +102,7 @@ export default function ProfileTab({
           </div>
         </div>
 
-        <div className="flex-1 rounded-[22px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.84)_0%,rgba(248,250,252,0.94)_100%)] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+        <div className="min-h-0 flex-1 overflow-y-auto rounded-[22px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.84)_0%,rgba(248,250,252,0.94)_100%)] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="grid grid-cols-3 gap-3">
             <ProfileBox label="Tienda" value={storeName} />
 
