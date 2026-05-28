@@ -117,22 +117,15 @@ export default function StoreOperationalConsentModal({
 
   if (!open) return null;
 
-  function handleScroll() {
+function handleScroll() {
   const el = scrollRef.current;
   if (!el) return;
 
   const distanceToBottom =
     el.scrollHeight - el.scrollTop - el.clientHeight;
 
-  if (distanceToBottom <= 18 && !reachedBottom) {
+  if (distanceToBottom <= 18) {
     setReachedBottom(true);
-
-    setTimeout(() => {
-      acceptanceRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }, 250);
   }
 }
 
@@ -255,7 +248,12 @@ export default function StoreOperationalConsentModal({
 
         <div
   ref={acceptanceRef}
-  className="max-h-[36vh] overflow-y-auto border-t border-slate-200 bg-white px-6 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+  className={[
+    "overflow-y-auto border-t border-slate-200 bg-white px-6 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+    reachedBottom
+      ? "max-h-[60vh]"
+      : "max-h-[36vh]",
+  ].join(" ")}
 >
           {!reachedBottom ? (
             <div className="mb-3 text-center text-[12px] font-bold text-slate-500">
