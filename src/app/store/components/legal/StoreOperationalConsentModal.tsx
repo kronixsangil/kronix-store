@@ -198,132 +198,141 @@ function handleScroll() {
           </div>
         </div>
 
-        <div
-          ref={scrollRef}
-          onScroll={handleScroll}
-          className="flex-1 overflow-y-auto px-6 py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
-          <div className="mb-5 rounded-[18px] border border-amber-200 bg-[linear-gradient(135deg,rgba(255,251,235,0.96),rgba(248,250,252,0.96))] p-4">
-            <div className="text-[11px] font-black uppercase tracking-[0.16em] text-amber-700">
-              Autorizaciones operativas
-            </div>
+        {step === "READ" ? (
+  <div
+    ref={scrollRef}
+    onScroll={handleScroll}
+    className="flex-1 overflow-y-auto px-6 py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+  >
+    <div className="mb-5 rounded-[18px] border border-amber-200 bg-[linear-gradient(135deg,rgba(255,251,235,0.96),rgba(248,250,252,0.96))] p-4">
+      <div className="text-[11px] font-black uppercase tracking-[0.16em] text-amber-700">
+        Autorizaciones operativas
+      </div>
 
-            <p className="mt-2 text-[13px] font-semibold leading-5 text-slate-700">
-              Estos consentimientos permiten que KroniX opere, monitoree,
-              audite y comunique información crítica para el funcionamiento de
-              la tienda dentro de la plataforma.
-            </p>
-          </div>
+      <p className="mt-2 text-[13px] font-semibold leading-5 text-slate-700">
+        Estos consentimientos permiten que KroniX opere, monitoree,
+        audite y comunique información crítica para el funcionamiento de
+        la tienda dentro de la plataforma.
+      </p>
+    </div>
 
-          <div className="rounded-[18px] border border-slate-200 bg-white p-5 shadow-[0_6px_16px_rgba(15,23,42,0.035)]">
-            {paragraphs.map((p, index) => {
-              const clean = p.replace(/^#+\s?/, "").trim();
+    <div className="rounded-[18px] border border-slate-200 bg-white p-5 shadow-[0_6px_16px_rgba(15,23,42,0.035)]">
+      {paragraphs.map((p, index) => {
+        const clean = p.replace(/^#+\s?/, "").trim();
 
-              const isBlockTitle =
-                clean.toUpperCase().startsWith("BLOQUE") ||
-                /^[0-9]+[\.\)]\s/.test(clean) ||
-                (clean.length < 90 && clean.toUpperCase() === clean);
+        const isBlockTitle =
+          clean.toUpperCase().startsWith("BLOQUE") ||
+          /^[0-9]+[\.\)]\s/.test(clean) ||
+          (clean.length < 90 && clean.toUpperCase() === clean);
 
-              const isBullet = clean.startsWith("-") || clean.startsWith("•");
+        const isBullet =
+          clean.startsWith("-") || clean.startsWith("•");
 
-              return (
-                <p
-                  key={`${clean}-${index}`}
-                  className={[
-                    isBlockTitle
-                      ? "mb-3 mt-5 text-[15px] font-black leading-5 text-slate-950 first:mt-0"
-                      : isBullet
-                        ? "mb-2 pl-4 text-[13px] font-semibold leading-5 text-slate-600"
-                        : "mb-3 text-[13px] font-medium leading-5 text-slate-600",
-                  ].join(" ")}
-                >
-                  {clean}
-                </p>
-              );
-            })}
-          </div>
-
-          <div className="mt-5 rounded-[16px] border border-amber-100 bg-amber-50 p-3 text-[12px] font-black text-amber-800">
-            Has llegado al final del documento.
-          </div>
-        </div>
-
-        {step === "CONSENTS" ? (
-<div className="flex-1 overflow-y-auto border-t border-slate-200 bg-white px-6 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {!reachedBottom ? (
-            <div className="mb-3 text-center text-[12px] font-bold text-slate-500">
-              Lee el documento completo para habilitar los consentimientos.
-            </div>
-          ) : null}
-
-          <div className="space-y-2">
-            {CONSENTS.map((item) => (
-              <label
-                key={item.key}
-                className={[
-                  "flex items-start gap-3 rounded-[16px] bg-slate-50 p-3 ring-1 ring-slate-200",
-                  reachedBottom
-                    ? "cursor-pointer"
-                    : "cursor-not-allowed opacity-60",
-                ].join(" ")}
-              >
-                <input
-                  type="checkbox"
-                  checked={checkedByKey[item.key]}
-                  disabled={!reachedBottom}
-                  onChange={(e) => toggleConsent(item.key, e.target.checked)}
-                  className="mt-1 h-4 w-4 accent-amber-600"
-                />
-
-                <span className="text-[13px] font-semibold leading-5 text-slate-700">
-                  <span className="font-black text-slate-900">
-                    {item.title}:{" "}
-                  </span>
-                  {item.text}
-                </span>
-              </label>
-            ))}
-          </div>
-
-          <button
-            type="button"
-            disabled={!canAccept}
-            onClick={handleAccept}
+        return (
+          <p
+            key={`${clean}-${index}`}
             className={[
-              "mt-3 inline-flex h-11 w-full items-center justify-center rounded-[14px] text-[13px] font-extrabold text-white transition",
-              canAccept ? "bg-slate-900 hover:bg-slate-800" : "bg-slate-300",
+              isBlockTitle
+                ? "mb-3 mt-5 text-[15px] font-black leading-5 text-slate-950 first:mt-0"
+                : isBullet
+                  ? "mb-2 pl-4 text-[13px] font-semibold leading-5 text-slate-600"
+                  : "mb-3 text-[13px] font-medium leading-5 text-slate-600",
             ].join(" ")}
           >
-            {saving ? "Guardando aceptación..." : "Aceptar y continuar"}
-          </button>
-          </div>
-) : (
-  <div className="border-t border-slate-200 bg-white px-6 py-5">
-    <div className="rounded-[16px] border border-amber-200 bg-amber-50 p-4">
+            {clean}
+          </p>
+        );
+      })}
+    </div>
+
+    <div className="mt-5 rounded-[16px] border border-amber-100 bg-amber-50 p-4">
       <div className="text-[13px] font-black text-amber-800">
         Has llegado al final del documento.
       </div>
 
-      <div className="mt-2 text-[13px] font-medium text-amber-900">
-        Confirma que terminaste la lectura para continuar con los consentimientos operativos.
+      <div className="mt-2 text-[13px] text-amber-900">
+        Confirma que terminaste la lectura para continuar.
+      </div>
+
+      <button
+        type="button"
+        disabled={!canContinueToConsents}
+        onClick={() => setStep("CONSENTS")}
+        className={[
+          "mt-4 inline-flex h-11 w-full items-center justify-center rounded-[14px] text-[13px] font-extrabold text-white transition",
+          canContinueToConsents
+            ? "bg-slate-900 hover:bg-slate-800"
+            : "bg-slate-300",
+        ].join(" ")}
+      >
+        He leído el documento
+      </button>
+    </div>
+  </div>
+) : (
+  <div className="flex-1 overflow-y-auto px-6 py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="mb-4 rounded-[18px] border border-amber-200 bg-amber-50 p-4">
+      <div className="text-[13px] font-black text-amber-800">
+        Consentimientos Operativos
+      </div>
+
+      <div className="mt-2 text-[13px] text-amber-900">
+        Marca todas las casillas para continuar.
       </div>
     </div>
 
-    <button
-      type="button"
-      disabled={!canContinueToConsents}
-      onClick={() => setStep("CONSENTS")}
-      className={[
-        "mt-4 inline-flex h-11 w-full items-center justify-center rounded-[14px] text-[13px] font-extrabold text-white transition",
-        canContinueToConsents
-          ? "bg-slate-900 hover:bg-slate-800"
-          : "bg-slate-300",
-      ].join(" ")}
-    >
-      He leído el documento
-    </button>
+    <div className="space-y-3">
+      {CONSENTS.map((item) => (
+        <label
+          key={item.key}
+          className="flex items-start gap-3 rounded-[16px] bg-slate-50 p-4 ring-1 ring-slate-200 cursor-pointer"
+        >
+          <input
+            type="checkbox"
+            checked={checkedByKey[item.key]}
+            onChange={(e) =>
+              toggleConsent(item.key, e.target.checked)
+            }
+            className="mt-1 h-4 w-4 accent-amber-600"
+          />
+
+          <span className="text-[13px] font-semibold leading-5 text-slate-700">
+            <span className="font-black text-slate-900">
+              {item.title}:{" "}
+            </span>
+            {item.text}
+          </span>
+        </label>
+      ))}
+    </div>
+
+    <div className="mt-4 flex gap-3">
+      <button
+        type="button"
+        onClick={() => setStep("READ")}
+        className="h-11 rounded-[14px] border border-slate-300 px-5 text-[13px] font-bold text-slate-700"
+      >
+        Volver
+      </button>
+
+      <button
+        type="button"
+        disabled={!canAccept}
+        onClick={handleAccept}
+        className={[
+          "flex-1 h-11 rounded-[14px] text-[13px] font-extrabold text-white transition",
+          canAccept
+            ? "bg-slate-900 hover:bg-slate-800"
+            : "bg-slate-300",
+        ].join(" ")}
+      >
+        {saving
+          ? "Guardando aceptación..."
+          : "Aceptar y continuar"}
+      </button>
+    </div>
   </div>
-)}
+)}        
         </div>
       </div>
     
