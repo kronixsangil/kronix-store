@@ -25,6 +25,8 @@ import ProfileTab from "./components/tabs/ProfileTab";
 import { playSound } from "./lib/alerts/sound";
 import StoreTermsModal from "./components/legal/StoreTermsModal";
 import { getStoreLegalOverview } from "./lib/storeLegal";
+import StorePrivacyModal from "./components/legal/StorePrivacyModal";
+import StoreOperationalConsentModal from "./components/legal/StoreOperationalConsentModal";
 
 const DRIVER_WAITING_STORAGE_KEY = "ct_store_driver_waiting_v1";
 const STORE_NOTICE_STORAGE_KEY = "ct_store_notice_v1";
@@ -689,7 +691,7 @@ if (cancelled) return;
   auth.accessToken?.trim() &&
   !auth.checkingRole &&
   !checkingTerms &&
-  !termsAccepted
+  !(termsAccepted && privacyAccepted && operationalConsentAccepted)
 ) {
   return (
     <StoreCityProvider value={cityContextValue}>
@@ -737,8 +739,8 @@ if (cancelled) return;
 
                   <p className="mt-3 max-w-[720px] text-[14px] font-medium leading-6 text-slate-600">
                     Para operar en KroniX Store, recibir pedidos, administrar productos
-                    y gestionar órdenes, debes revisar y aceptar los Términos y
-                    Condiciones vigentes para comercios.
+                    y gestionar órdenes, debes revisar y aceptar los documentos legales 
+                    vigentes para comercios.
                   </p>
 
                   <div className="mt-5 grid gap-3 md:grid-cols-3">
@@ -772,16 +774,40 @@ if (cancelled) return;
                 </div>
               </div>
 
-              <StoreTermsModal
-                open
-                force
-                storeFetch={auth.storeFetch}
-                onClose={() => {}}
-                onAccepted={() => {
-                  setTermsAccepted(true);
-                  setTabSafe("PROFILE");
-                }}
-              />
+              {!termsAccepted ? (
+  <StoreTermsModal
+    open
+    force
+    storeFetch={auth.storeFetch}
+    onClose={() => {}}
+    onAccepted={async () => {
+      await refreshLegalStatus();
+      setTabSafe("PROFILE");
+    }}
+  />
+) : !privacyAccepted ? (
+  <StorePrivacyModal
+    open
+    force
+    storeFetch={auth.storeFetch}
+    onClose={() => {}}
+    onAccepted={async () => {
+      await refreshLegalStatus();
+      setTabSafe("PROFILE");
+    }}
+  />
+) : !operationalConsentAccepted ? (
+  <StoreOperationalConsentModal
+    open
+    force
+    storeFetch={auth.storeFetch}
+    onClose={() => {}}
+    onAccepted={async () => {
+      await refreshLegalStatus();
+      setTabSafe("PROFILE");
+    }}
+  />
+) : null}
             </div>
           </div>
         </div>
