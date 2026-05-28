@@ -24,7 +24,7 @@ import ProfileTab from "./components/tabs/ProfileTab";
 
 import { playSound } from "./lib/alerts/sound";
 import StoreTermsModal from "./components/legal/StoreTermsModal";
-import { checkStoreTermsStatus } from "./lib/storeLegal";
+import { getStoreLegalOverview } from "./lib/storeLegal";
 
 const DRIVER_WAITING_STORAGE_KEY = "ct_store_driver_waiting_v1";
 const STORE_NOTICE_STORAGE_KEY = "ct_store_notice_v1";
@@ -130,6 +130,10 @@ function saveStoreNotice(input: {
 export default function StoreDashboard() {
   const [tab, setTabState] = useState<TabKey>("ORDERS");
   const [termsAccepted, setTermsAccepted] = useState(false);
+
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+const [operationalConsentAccepted, setOperationalConsentAccepted] =
+  useState(false);
 const [checkingTerms, setCheckingTerms] = useState(true);
 
   const auth = useStoreAuth();
@@ -211,10 +215,15 @@ const [checkingTerms, setCheckingTerms] = useState(true);
   setCheckingTerms(true);
 
   try {
-    const ok = await checkStoreTermsStatus(auth.storeFetch);
-    setTermsAccepted(ok);
+    const overview = await getStoreLegalOverview(auth.storeFetch);
+
+    setTermsAccepted(overview.termsAccepted);
+    setPrivacyAccepted(overview.privacyAccepted);
+    setOperationalConsentAccepted(overview.operationalConsentAccepted);
   } catch {
     setTermsAccepted(false);
+    setPrivacyAccepted(false);
+    setOperationalConsentAccepted(false);
   } finally {
     setCheckingTerms(false);
   }
@@ -908,8 +917,10 @@ if (cancelled) return;
                   storeName={settings.storeName}
                   storeCityLabel={settings.storeCityLabel}
                   storeCitySlug={settings.storeCitySlug}
-                  storeFetch={auth.storeFetch}
+                  storeFetch={auth.storeFetch}  
                   termsAccepted={termsAccepted}
+                  privacyAccepted={privacyAccepted}
+                  operationalConsentAccepted={operationalConsentAccepted}
                   checkingTerms={checkingTerms}
                   onLegalStatusChanged={refreshLegalStatus}
                 />

@@ -6,7 +6,14 @@ import Image from "next/image";
 import SmallChip from "../ui/SmallChip";
 import { StoreStateUI } from "../../lib/storeTypes";
 import StoreTermsModal from "../legal/StoreTermsModal";
-import { STORE_TERMS_VERSION, StoreFetchFn } from "../../lib/storeLegal";
+import StorePrivacyModal from "../legal/StorePrivacyModal";
+import StoreOperationalConsentModal from "../legal/StoreOperationalConsentModal";
+import {
+  STORE_OPERATIONAL_CONSENT_VERSION,
+  STORE_PRIVACY_VERSION,
+  STORE_TERMS_VERSION,
+  StoreFetchFn,
+} from "../../lib/storeLegal";
 
 type Props = {
   storeIcon: string;
@@ -22,6 +29,8 @@ type Props = {
   storeCitySlug: string;
   storeFetch: StoreFetchFn;
   termsAccepted: boolean;
+  privacyAccepted: boolean;
+  operationalConsentAccepted: boolean;
   checkingTerms: boolean;
   onLegalStatusChanged: () => void | Promise<void>;
 };
@@ -52,6 +61,55 @@ function ProfileBox({
   );
 }
 
+function LegalCard({
+  title,
+  version,
+  accepted,
+  checking,
+  onOpen,
+}: {
+  title: string;
+  version: string;
+  accepted: boolean;
+  checking: boolean;
+  onOpen: () => void;
+}) {
+  return (
+    <div className="rounded-[16px] border border-slate-200 bg-white/94 p-4 shadow-[0_6px_16px_rgba(15,23,42,0.035)]">
+      <div className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-400">
+        Legal
+      </div>
+
+      <div className="mt-2 text-[20px] font-black leading-tight text-slate-900">
+        {title}
+      </div>
+
+      <div className="mt-2 text-[13px] font-medium leading-snug text-slate-500">
+        Versión: {version}
+      </div>
+
+      <div
+        className={[
+          "mt-3 inline-flex rounded-full px-3 py-1 text-[11px] font-black ring-1",
+          accepted
+            ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+            : "bg-amber-50 text-amber-700 ring-amber-100",
+        ].join(" ")}
+      >
+        {checking ? "Verificando..." : accepted ? "Aceptado" : "Pendiente"}
+      </div>
+
+      <button
+        type="button"
+        onClick={onOpen}
+        className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-[14px] bg-slate-900 px-4 text-[13px] font-extrabold text-white transition hover:bg-slate-800"
+      >
+        Ver documento legal
+      </button>
+    </div>
+  );
+}
+
 export default function ProfileTab({
   storeIcon,
   storeImageUrl = "",
@@ -66,10 +124,14 @@ export default function ProfileTab({
   storeCitySlug,
   storeFetch,
   termsAccepted,
+  privacyAccepted,
+  operationalConsentAccepted,
   checkingTerms,
   onLegalStatusChanged,
 }: Props) {
   const [termsOpen, setTermsOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [operationalConsentOpen, setOperationalConsentOpen] = useState(false);
 
   return (
     <>
@@ -78,12 +140,7 @@ export default function ProfileTab({
           <div className="flex items-center gap-4">
             <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-white ring-1 ring-slate-200 shadow-[0_8px_20px_rgba(15,23,42,0.08)]">
               {storeImageUrl ? (
-                <Image
-                  src={storeImageUrl}
-                  alt={storeName}
-                  fill
-                  className="object-cover"
-                />
+                <Image src={storeImageUrl} alt={storeName} fill className="object-cover" />
               ) : (
                 <div className="grid h-full w-full place-items-center text-[24px] text-slate-700">
                   {storeIcon}
@@ -96,7 +153,7 @@ export default function ProfileTab({
                 Perfil
               </div>
               <div className="mt-2 text-[13px] font-medium text-slate-600">
-                Información de acceso, sesión y datos generales de la tienda.
+                Información de acceso, sesión y documentos legales de la tienda.
               </div>
             </div>
           </div>
@@ -111,9 +168,7 @@ export default function ProfileTab({
                 Ciudad
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <SmallChip tone="softBlue">
-                  📍 {storeCityLabel || "Sin ciudad"}
-                </SmallChip>
+                <SmallChip tone="softBlue">📍 {storeCityLabel || "Sin ciudad"}</SmallChip>
                 {storeCitySlug ? (
                   <SmallChip tone="softSlate">Slug: {storeCitySlug}</SmallChip>
                 ) : null}
@@ -140,42 +195,29 @@ export default function ProfileTab({
               helper="AppKey: store"
             />
 
-            <div className="rounded-[16px] border border-slate-200 bg-white/94 p-4 shadow-[0_6px_16px_rgba(15,23,42,0.035)]">
-              <div className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-400">
-                Legal
-              </div>
+            <LegalCard
+              title="Términos y Condiciones"
+              version={STORE_TERMS_VERSION}
+              accepted={termsAccepted}
+              checking={checkingTerms}
+              onOpen={() => setTermsOpen(true)}
+            />
 
-              <div className="mt-2 text-[20px] font-black leading-tight text-slate-900">
-                Términos y Condiciones
-              </div>
+            <LegalCard
+              title="Política de Privacidad"
+              version={STORE_PRIVACY_VERSION}
+              accepted={privacyAccepted}
+              checking={checkingTerms}
+              onOpen={() => setPrivacyOpen(true)}
+            />
 
-              <div className="mt-2 text-[13px] font-medium leading-snug text-slate-500">
-                Versión: {STORE_TERMS_VERSION}
-              </div>
-
-              <div
-                className={[
-                  "mt-3 inline-flex rounded-full px-3 py-1 text-[11px] font-black ring-1",
-                  termsAccepted
-                    ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
-                    : "bg-amber-50 text-amber-700 ring-amber-100",
-                ].join(" ")}
-              >
-                {checkingTerms
-                  ? "Verificando..."
-                  : termsAccepted
-                    ? "Aceptado"
-                    : "Pendiente"}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setTermsOpen(true)}
-                className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-[14px] bg-slate-900 px-4 text-[13px] font-extrabold text-white transition hover:bg-slate-800"
-              >
-                Ver documento legal
-              </button>
-            </div>
+            <LegalCard
+              title="Consentimientos Operativos"
+              version={STORE_OPERATIONAL_CONSENT_VERSION}
+              accepted={operationalConsentAccepted}
+              checking={checkingTerms}
+              onOpen={() => setOperationalConsentOpen(true)}
+            />
 
             <div className="rounded-[16px] border border-slate-200 bg-white/94 p-4 shadow-[0_6px_16px_rgba(15,23,42,0.035)]">
               <div className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-400">
@@ -210,6 +252,26 @@ export default function ProfileTab({
         onClose={() => setTermsOpen(false)}
         onAccepted={async () => {
           setTermsOpen(false);
+          await onLegalStatusChanged();
+        }}
+      />
+
+      <StorePrivacyModal
+        open={privacyOpen}
+        storeFetch={storeFetch}
+        onClose={() => setPrivacyOpen(false)}
+        onAccepted={async () => {
+          setPrivacyOpen(false);
+          await onLegalStatusChanged();
+        }}
+      />
+
+      <StoreOperationalConsentModal
+        open={operationalConsentOpen}
+        storeFetch={storeFetch}
+        onClose={() => setOperationalConsentOpen(false)}
+        onAccepted={async () => {
+          setOperationalConsentOpen(false);
           await onLegalStatusChanged();
         }}
       />
