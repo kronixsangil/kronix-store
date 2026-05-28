@@ -80,8 +80,7 @@ export default function StoreOperationalConsentModal({
   onAccepted,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const acceptanceRef = useRef<HTMLDivElement | null>(null);
-  const [reachedBottom, setReachedBottom] = useState(false);
+   const [reachedBottom, setReachedBottom] = useState(false);
   const [checkedByKey, setCheckedByKey] = useState<Record<ConsentKey, boolean>>({
     communications: false,
     monitoring: false,
@@ -92,6 +91,7 @@ export default function StoreOperationalConsentModal({
     finalAcceptance: false,
   });
   const [saving, setSaving] = useState(false);
+  const [step, setStep] = useState<"READ" | "CONSENTS">("READ");
 
   const paragraphs = useMemo(() => {
     return STORE_OPERATIONAL_CONSENT_TEXT.split("\n").filter(
@@ -113,6 +113,7 @@ export default function StoreOperationalConsentModal({
       finalAcceptance: false,
     });
     setSaving(false);
+    setStep("READ");
   }, [open]);
 
   if (!open) return null;
@@ -138,6 +139,7 @@ function handleScroll() {
 
   const allChecked = CONSENTS.every((item) => checkedByKey[item.key]);
   const canAccept = reachedBottom && allChecked && !saving;
+  const canContinueToConsents = reachedBottom;
 
   async function handleAccept() {
     if (!canAccept) return;
@@ -246,15 +248,8 @@ function handleScroll() {
           </div>
         </div>
 
-        <div
-  ref={acceptanceRef}
-  className={[
-    "overflow-y-auto border-t border-slate-200 bg-white px-6 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-    reachedBottom
-      ? "max-h-[60vh]"
-      : "max-h-[36vh]",
-  ].join(" ")}
->
+        {step === "CONSENTS" ? (
+<div className="flex-1 overflow-y-auto border-t border-slate-200 bg-white px-6 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {!reachedBottom ? (
             <div className="mb-3 text-center text-[12px] font-bold text-slate-500">
               Lee el documento completo para habilitar los consentimientos.
@@ -301,8 +296,36 @@ function handleScroll() {
           >
             {saving ? "Guardando aceptación..." : "Aceptar y continuar"}
           </button>
-        </div>
+          </div>
+) : (
+  <div className="border-t border-slate-200 bg-white px-6 py-5">
+    <div className="rounded-[16px] border border-amber-200 bg-amber-50 p-4">
+      <div className="text-[13px] font-black text-amber-800">
+        Has llegado al final del documento.
+      </div>
+
+      <div className="mt-2 text-[13px] font-medium text-amber-900">
+        Confirma que terminaste la lectura para continuar con los consentimientos operativos.
       </div>
     </div>
+
+    <button
+      type="button"
+      disabled={!canContinueToConsents}
+      onClick={() => setStep("CONSENTS")}
+      className={[
+        "mt-4 inline-flex h-11 w-full items-center justify-center rounded-[14px] text-[13px] font-extrabold text-white transition",
+        canContinueToConsents
+          ? "bg-slate-900 hover:bg-slate-800"
+          : "bg-slate-300",
+      ].join(" ")}
+    >
+      He leído el documento
+    </button>
+  </div>
+)}
+        </div>
+      </div>
+    
   );
 }
