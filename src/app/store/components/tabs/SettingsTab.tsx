@@ -101,7 +101,7 @@ export default function SettingsTab({
   setSoundVolumeState,
 }: Props) {
   return (
-    <div className="ct-panel ct-tab-frame h-full min-h-0 overflow-hidden p-3">
+    <div className="ct-panel ct-tab-frame h-full min-h-0 overflow-y-auto p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <div className="rounded-[18px] border border-white/70 bg-white/70 px-4 py-3">
         <div className="ct-section-title">Configuración</div>
         <div className="mt-1 ct-section-desc">
@@ -109,8 +109,8 @@ export default function SettingsTab({
         </div>
       </div>
 
-      <div className="mt-3 grid h-[540px] min-h-0 grid-cols-2 gap-3 overflow-hidden">
-        <div className="min-h-0 space-y-2 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mt-3 grid min-h-[540px] grid-cols-2 gap-3">
+        <div className="space-y-2">
           <SectionCard
             title="Auto-decisión operativa"
             desc="Define cómo responde el sistema cuando la tienda no toma una decisión a tiempo."
@@ -213,7 +213,7 @@ export default function SettingsTab({
           </SectionCard>
         </div>
 
-        <div className="min-h-0 space-y-2 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="space-y-2">
           <SectionCard
             title="Impresión / Comanda"
             desc="Define cómo se imprime el ticket y qué información se muestra."

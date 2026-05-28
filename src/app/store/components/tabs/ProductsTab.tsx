@@ -252,14 +252,14 @@ export default function ProductsTab({
   }
 
   return (
-    <div className="ct-panel ct-tab-frame overflow-hidden p-2">
+    <div className="ct-panel ct-tab-frame h-full min-h-0 overflow-y-auto p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {err ? (
         <div className="mb-2 rounded-[16px] border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-700">
           {err}
         </div>
       ) : null}
 
-      <div className="grid h-full min-h-0 grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)] items-start gap-2 overflow-hidden">
+      <div className="grid min-h-0 grid-cols-[55%_45%] items-start gap-2">
         {/* COLUMNA IZQUIERDA */}
         <div className="min-w-0">
           <div className="rounded-[18px] border border-white/70 bg-white/70 px-4 py-3">
@@ -269,7 +269,7 @@ export default function ProductsTab({
             </div>
           </div>
 
-          <div className="mt-2 ct-card flex h-[592px] min-h-0 flex-col p-3">
+          <div className="mt-2 ct-card flex min-h-[592px] flex-col p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <div className="text-[17px] font-black leading-none text-slate-900">Catálogo actual</div>
@@ -427,7 +427,7 @@ export default function ProductsTab({
 
         {/* COLUMNA DERECHA */}
         <div className="min-w-0 pt-[14px]">
-          <div className="ct-card flex h-[600px] min-h-0 flex-col p-3">
+          <div className="ct-card flex min-h-[600px] flex-col p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <div className="text-[17px] font-black leading-none text-slate-900">
