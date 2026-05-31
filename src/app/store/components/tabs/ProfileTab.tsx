@@ -1,7 +1,7 @@
 //src\app\store\components\tabs\ProfileTab.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import SmallChip from "../ui/SmallChip";
 import { StoreStateUI } from "../../lib/storeTypes";
@@ -9,10 +9,9 @@ import StoreTermsModal from "../legal/StoreTermsModal";
 import StorePrivacyModal from "../legal/StorePrivacyModal";
 import StoreOperationalConsentModal from "../legal/StoreOperationalConsentModal";
 import {
-  STORE_OPERATIONAL_CONSENT_VERSION,
-  STORE_PRIVACY_VERSION,
-  STORE_TERMS_VERSION,
+  getStoreLegalOverview,
   StoreFetchFn,
+  type StoreLegalDocument,
 } from "../../lib/storeLegal";
 
 type Props = {
@@ -85,7 +84,7 @@ function LegalCard({
       </div>
 
       <div className="mt-2 text-[13px] font-medium leading-snug text-slate-500">
-        Versión: {version}
+        Versión: {version || "Cargando..."}
       </div>
 
       <div
@@ -132,6 +131,47 @@ export default function ProfileTab({
   const [termsOpen, setTermsOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [operationalConsentOpen, setOperationalConsentOpen] = useState(false);
+
+  const [legalDocs, setLegalDocs] = useState<StoreLegalDocument[]>([]);
+  const [loadingDocs, setLoadingDocs] = useState(true);
+
+  async function loadLegalDocs() {
+    setLoadingDocs(true);
+
+    try {
+      const overview = await getStoreLegalOverview(storeFetch);
+      setLegalDocs(overview.currentDocuments || []);
+    } catch {
+      setLegalDocs([]);
+    } finally {
+      setLoadingDocs(false);
+    }
+  }
+
+  useEffect(() => {
+    loadLegalDocs();
+  }, []);
+
+  const docsByType = useMemo(() => {
+    const map = new Map<string, StoreLegalDocument>();
+
+    for (const doc of legalDocs) {
+      map.set(doc.documentType, doc);
+    }
+
+    return map;
+  }, [legalDocs]);
+
+  const termsDoc = docsByType.get("STORE_TERMS");
+  const privacyDoc = docsByType.get("STORE_PRIVACY");
+  const operationalDoc = docsByType.get("STORE_OPERATIONAL_CONSENT");
+
+  async function refreshLegalAfterAccept() {
+    await onLegalStatusChanged();
+    await loadLegalDocs();
+  }
+
+  const legalChecking = checkingTerms || loadingDocs;
 
   return (
     <>
@@ -196,26 +236,26 @@ export default function ProfileTab({
             />
 
             <LegalCard
-              title="Términos y Condiciones"
-              version={STORE_TERMS_VERSION}
+              title={termsDoc?.title || "Términos y Condiciones"}
+              version={termsDoc?.version || "Cargando..."}
               accepted={termsAccepted}
-              checking={checkingTerms}
+              checking={legalChecking}
               onOpen={() => setTermsOpen(true)}
             />
 
             <LegalCard
-              title="Política de Privacidad"
-              version={STORE_PRIVACY_VERSION}
+              title={privacyDoc?.title || "Política de Privacidad"}
+              version={privacyDoc?.version || "Cargando..."}
               accepted={privacyAccepted}
-              checking={checkingTerms}
+              checking={legalChecking}
               onOpen={() => setPrivacyOpen(true)}
             />
 
             <LegalCard
-              title="Consentimientos Operativos"
-              version={STORE_OPERATIONAL_CONSENT_VERSION}
+              title={operationalDoc?.title || "Consentimientos Operativos"}
+              version={operationalDoc?.version || "Cargando..."}
               accepted={operationalConsentAccepted}
-              checking={checkingTerms}
+              checking={legalChecking}
               onOpen={() => setOperationalConsentOpen(true)}
             />
 
@@ -227,7 +267,10 @@ export default function ProfileTab({
               <div className="mt-4 grid gap-2">
                 <button
                   type="button"
-                  onClick={onRefresh}
+                  onClick={async () => {
+                    await onRefresh();
+                    await loadLegalDocs();
+                  }}
                   className="inline-flex h-10 items-center justify-center rounded-[14px] bg-slate-900 px-4 text-[13px] font-extrabold text-white transition hover:bg-slate-800"
                 >
                   Verificar sesión
@@ -252,7 +295,7 @@ export default function ProfileTab({
         onClose={() => setTermsOpen(false)}
         onAccepted={async () => {
           setTermsOpen(false);
-          await onLegalStatusChanged();
+          await refreshLegalAfterAccept();
         }}
       />
 
@@ -262,7 +305,7 @@ export default function ProfileTab({
         onClose={() => setPrivacyOpen(false)}
         onAccepted={async () => {
           setPrivacyOpen(false);
-          await onLegalStatusChanged();
+          await refreshLegalAfterAccept();
         }}
       />
 
@@ -272,7 +315,7 @@ export default function ProfileTab({
         onClose={() => setOperationalConsentOpen(false)}
         onAccepted={async () => {
           setOperationalConsentOpen(false);
-          await onLegalStatusChanged();
+          await refreshLegalAfterAccept();
         }}
       />
     </>
