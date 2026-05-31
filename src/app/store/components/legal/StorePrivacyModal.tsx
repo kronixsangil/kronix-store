@@ -2,13 +2,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { acceptStorePrivacyBackend, StoreFetchFn } from "../../lib/storeLegal";
 import {
-  STORE_PRIVACY_LAST_UPDATED,
-  STORE_PRIVACY_TEXT,
-  STORE_PRIVACY_TITLE,
-  STORE_PRIVACY_VERSION,
-} from "../../legal/storePrivacy";
+  acceptStorePrivacyBackend,
+  getCurrentStoreLegalDocument,
+  StoreFetchFn,
+  type StoreLegalDocument,
+} from "../../lib/storeLegal";
 
 type Props = {
   open: boolean;
@@ -26,24 +25,44 @@ export default function StorePrivacyModal({
   onAccepted,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
+
   const [reachedBottom, setReachedBottom] = useState(false);
   const [checked, setChecked] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loadingDoc, setLoadingDoc] = useState(false);
+  const [legalDoc, setLegalDoc] = useState<StoreLegalDocument | null>(null);
 
   const paragraphs = useMemo(() => {
-    return STORE_PRIVACY_TEXT.split("\n").filter(
-      (line) => line.trim().length > 0
-    );
-  }, []);
+    return String(legalDoc?.content ?? "")
+      .split("\n")
+      .filter((line) => line.trim().length > 0);
+  }, [legalDoc?.content]);
 
   useEffect(() => {
     if (!open) return;
+
     setReachedBottom(false);
     setChecked(false);
     setSaving(false);
-  }, [open]);
+    setLoadingDoc(true);
+
+    getCurrentStoreLegalDocument(storeFetch, "STORE_PRIVACY")
+      .then((doc) => setLegalDoc(doc))
+      .catch(() => setLegalDoc(null))
+      .finally(() => setLoadingDoc(false));
+  }, [open, storeFetch]);
 
   if (!open) return null;
+
+  const title = legalDoc?.title || "Política de Privacidad para Comercios KroniX";
+  const version = legalDoc?.version || "Versión vigente";
+  const lastUpdated = legalDoc?.updatedAt
+    ? new Date(legalDoc.updatedAt).toLocaleDateString("es-CO", {
+        year: "numeric",
+        month: "long",
+        day: "2-digit",
+      })
+    : "Legal Center";
 
   function handleScroll() {
     const el = scrollRef.current;
@@ -54,12 +73,12 @@ export default function StorePrivacyModal({
   }
 
   async function handleAccept() {
-    if (!reachedBottom || !checked || saving) return;
+    if (!reachedBottom || !checked || saving || !legalDoc?.version) return;
 
     setSaving(true);
 
     try {
-      await acceptStorePrivacyBackend(storeFetch);
+      await acceptStorePrivacyBackend(storeFetch, legalDoc.version);
       alert("Gracias por aceptar la Política de Privacidad de KroniX Store.");
       onAccepted();
       onClose();
@@ -72,7 +91,7 @@ export default function StorePrivacyModal({
     }
   }
 
-  const canAccept = reachedBottom && checked && !saving;
+  const canAccept = reachedBottom && checked && !saving && !!legalDoc?.version;
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/45 px-4 py-4 backdrop-blur-[2px]">
@@ -85,16 +104,16 @@ export default function StorePrivacyModal({
               </div>
 
               <h2 className="mt-2 text-[28px] font-black leading-none text-slate-950">
-                {STORE_PRIVACY_TITLE}
+                {title}
               </h2>
 
               <div className="mt-3 flex flex-wrap gap-2">
                 <span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-[11px] font-black text-blue-700 ring-1 ring-blue-100">
-                  {STORE_PRIVACY_VERSION}
+                  {version}
                 </span>
 
                 <span className="inline-flex rounded-full bg-slate-50 px-3 py-1 text-[11px] font-black text-slate-600 ring-1 ring-slate-200">
-                  Actualizado: {STORE_PRIVACY_LAST_UPDATED}
+                  Actualizado: {lastUpdated}
                 </span>
               </div>
             </div>
@@ -129,31 +148,41 @@ export default function StorePrivacyModal({
           </div>
 
           <div className="rounded-[18px] border border-slate-200 bg-white p-5 shadow-[0_6px_16px_rgba(15,23,42,0.035)]">
-            {paragraphs.map((p, index) => {
-              const clean = p.replace(/^#+\s?/, "").trim();
+            {loadingDoc ? (
+              <p className="text-[13px] font-semibold leading-5 text-slate-600">
+                Cargando documento legal vigente desde Legal Center...
+              </p>
+            ) : paragraphs.length === 0 ? (
+              <p className="text-[13px] font-semibold leading-5 text-amber-700">
+                No se pudo cargar la política vigente. Intenta nuevamente.
+              </p>
+            ) : (
+              paragraphs.map((p, index) => {
+                const clean = p.replace(/^#+\s?/, "").trim();
 
-              const isBlockTitle =
-                clean.toUpperCase().startsWith("BLOQUE") ||
-                /^[0-9]+[\.\)]\s/.test(clean) ||
-                (clean.length < 90 && clean.toUpperCase() === clean);
+                const isBlockTitle =
+                  clean.toUpperCase().startsWith("BLOQUE") ||
+                  /^[0-9]+[\.\)]\s/.test(clean) ||
+                  (clean.length < 90 && clean.toUpperCase() === clean);
 
-              const isBullet = clean.startsWith("-") || clean.startsWith("•");
+                const isBullet = clean.startsWith("-") || clean.startsWith("•");
 
-              return (
-                <p
-                  key={`${clean}-${index}`}
-                  className={[
-                    isBlockTitle
-                      ? "mb-3 mt-5 text-[15px] font-black leading-5 text-slate-950 first:mt-0"
-                      : isBullet
-                        ? "mb-2 pl-4 text-[13px] font-semibold leading-5 text-slate-600"
-                        : "mb-3 text-[13px] font-medium leading-5 text-slate-600",
-                  ].join(" ")}
-                >
-                  {clean}
-                </p>
-              );
-            })}
+                return (
+                  <p
+                    key={`${clean}-${index}`}
+                    className={[
+                      isBlockTitle
+                        ? "mb-3 mt-5 text-[15px] font-black leading-5 text-slate-950 first:mt-0"
+                        : isBullet
+                          ? "mb-2 pl-4 text-[13px] font-semibold leading-5 text-slate-600"
+                          : "mb-3 text-[13px] font-medium leading-5 text-slate-600",
+                    ].join(" ")}
+                  >
+                    {clean}
+                  </p>
+                );
+              })
+            )}
           </div>
 
           <div className="mt-5 rounded-[16px] border border-blue-100 bg-blue-50 p-3 text-[12px] font-black text-blue-800">
