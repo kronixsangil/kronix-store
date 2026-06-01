@@ -30,21 +30,16 @@ export type ApiOrder = {
   id: string;
   status: ApiOrderStatus;
   flowStatus?: ApiOrderFlowStatus | string | null;
-
   paymentStatus?: string | null;
   paymentReference?: string | null;
   paidAt?: string | null;
-
   createdAt: string;
   updatedAt: string;
-
   dropoffAddress: string;
   customerNote?: string | null;
-
   totalCOP?: number | null;
   deliveryFeeCOP?: number | null;
   tipCOP?: number | null;
-
   financialSnapshot?: ApiFinancialSnapshot | null;
 
   driver?: {
@@ -61,11 +56,9 @@ export type ApiOrder = {
   pickups?: Array<{
     sequence: number;
     pickupAddress: string;
-
     storeConfirmedAt?: string | null;
     storeRejectedAt?: string | null;
     rejectReason?: string | null;
-
     store?: { id?: string; storeCode?: string; name: string } | null;
   }>;
 
@@ -86,6 +79,37 @@ export type StoreMe = {
   cityId?: string | null;
   storeCode: string;
   name: string;
+
+  legalName?: string | null;
+  nit?: string | null;
+  businessEmail?: string | null;
+  category?: string | null;
+  description?: string | null;
+  cel1?: string | null;
+  cel2?: string | null;
+  address?: string | null;
+  addressReference?: string | null;
+
+  lat?: number | null;
+  lng?: number | null;
+  mainEntranceLat?: number | null;
+  mainEntranceLng?: number | null;
+  pickupLat?: number | null;
+  pickupLng?: number | null;
+
+  hrOp?: string | null;
+  hrCl?: string | null;
+
+  image?: string | null;
+  image2?: string | null;
+  image3?: string | null;
+  image4?: string | null;
+  coverImage?: string | null;
+  primaryColor?: string | null;
+  secondaryColor?: string | null;
+
+  onboardingStep?: number | null;
+  onboardingCompleted?: boolean | null;
 
   isActive: boolean;
   isPaused: boolean;
