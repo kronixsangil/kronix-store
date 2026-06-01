@@ -31,8 +31,8 @@ function getStoreWrongRoleMessage(role?: string | null) {
 }
 
 export function useStoreAuth() {
-  const [storeCode, setStoreCode] = useState<string>("1");
-  const [inputStoreCode, setInputStoreCode] = useState<string>("1");
+  const [storeCode, setStoreCode] = useState<string>("");
+const [inputStoreCode, setInputStoreCode] = useState<string>("");
 
   const [accessToken, setAccessToken] = useState<string>("");
   const [authChecked, setAuthChecked] = useState(false);
