@@ -143,6 +143,11 @@ function toNullableNumber(value: string) {
   return n;
 }
 
+function isRealStoreName(value: string) {
+  const v = String(value ?? "").trim().toUpperCase();
+  return Boolean(v && v !== "TIENDA");
+}
+
 function ProfileBox({
   label,
   value,
@@ -301,7 +306,9 @@ export default function ProfileTab({
   const [loadingDocs, setLoadingDocs] = useState(true);
 
   const [storeProfile, setStoreProfile] = useState<StoreMe | null>(null);
-  const [profileForm, setProfileForm] = useState<ProfileForm>(emptyForm);
+  const [profileForm, setProfileForm] = useState<ProfileForm>(() =>
+    buildFormFromStore(null, isRealStoreName(storeName) ? storeName : "")
+  );
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMsg, setProfileMsg] = useState("");
@@ -329,10 +336,21 @@ export default function ProfileTab({
     try {
       const me = await storeFetch<StoreMe>("/stores/me", { method: "GET" });
       setStoreProfile(me);
-      setProfileForm(buildFormFromStore(me, storeName));
-    } catch {
+      setProfileForm(buildFormFromStore(me, isRealStoreName(storeName) ? storeName : ""));
+      setProfileMsg("");
+    } catch (e: any) {
       setStoreProfile(null);
-      setProfileForm(buildFormFromStore(null, storeName));
+
+      setProfileForm((prev) => ({
+        ...prev,
+        name: isRealStoreName(storeName) ? storeName : prev.name,
+      }));
+
+      setProfileMsg(
+        `No se pudo cargar el perfil completo de la tienda. Detalle: ${String(
+          e?.message ?? "Error desconocido"
+        )}`
+      );
     } finally {
       setLoadingProfile(false);
     }
@@ -343,6 +361,15 @@ export default function ProfileTab({
     loadProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!storeProfile && isRealStoreName(storeName)) {
+      setProfileForm((prev) => ({
+        ...prev,
+        name: prev.name || storeName,
+      }));
+    }
+  }, [storeName, storeProfile]);
 
   const docsByType = useMemo(() => {
     const map = new Map<string, StoreLegalDocument>();
@@ -422,7 +449,7 @@ export default function ProfileTab({
       });
 
       setStoreProfile(updated);
-      setProfileForm(buildFormFromStore(updated, storeName));
+      setProfileForm(buildFormFromStore(updated, isRealStoreName(storeName) ? storeName : ""));
       setProfileMsg("Información guardada correctamente.");
       await onRefresh();
     } catch (e: any) {
@@ -434,6 +461,14 @@ export default function ProfileTab({
 
   const legalChecking = checkingTerms || loadingDocs;
   const activeStoreImage = profileForm.image || storeImageUrl;
+  const displayStoreName = isRealStoreName(storeName)
+    ? storeName
+    : storeProfile?.name || profileForm.name || "Tienda";
+  const displayCityLabel = storeCityLabel && storeCityLabel !== "Establecimiento"
+    ? storeCityLabel
+    : storeProfile?.city?.name
+      ? `${storeProfile.city.name}${storeProfile.city.department ? `, ${storeProfile.city.department}` : ""}`
+      : "Sin ciudad";
 
   return (
     <>
@@ -442,7 +477,7 @@ export default function ProfileTab({
           <div className="flex items-center gap-4">
             <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-white ring-1 ring-slate-200 shadow-[0_8px_20px_rgba(15,23,42,0.08)]">
               {activeStoreImage ? (
-                <Image src={activeStoreImage} alt={storeName} fill className="object-cover" />
+                <Image src={activeStoreImage} alt={displayStoreName} fill className="object-cover" />
               ) : (
                 <div className="grid h-full w-full place-items-center text-[24px] text-slate-700">
                   {storeIcon}
@@ -463,21 +498,21 @@ export default function ProfileTab({
 
         <div className="min-h-0 flex-1 overflow-y-auto rounded-[22px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.84)_0%,rgba(248,250,252,0.94)_100%)] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
-            <ProfileBox label="Tienda" value={storeName} />
+            <ProfileBox label="Tienda" value={displayStoreName} />
 
             <div className="rounded-[16px] border border-slate-200 bg-white/94 p-4 shadow-[0_6px_16px_rgba(15,23,42,0.035)]">
               <div className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-400">
                 Ciudad
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <SmallChip tone="softBlue">📍 {storeCityLabel || "Sin ciudad"}</SmallChip>
+                <SmallChip tone="softBlue">📍 {displayCityLabel}</SmallChip>
                 {storeCitySlug ? (
                   <SmallChip tone="softSlate">Slug: {storeCitySlug}</SmallChip>
                 ) : null}
               </div>
             </div>
 
-            <ProfileBox label="Usuario" value={userName} helper="Rol: STORE" />
+            <ProfileBox label="Usuario" value={userName || "—"} helper="Rol: STORE" />
 
             <ProfileBox
               label="Estado actual"
