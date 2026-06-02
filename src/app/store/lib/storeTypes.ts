@@ -175,7 +175,7 @@ export type StoreProductUpsertInput = {
   sortOrder?: number;
 };
 
-export type TabKey = "ORDERS" | "PRODUCTS" | "EARNINGS" | "SETTINGS" | "PROFILE";
+export type TabKey = "ORDERS" | "PRODUCTS" | "EARNINGS" | "SETTINGS" | "REGISTER" | "PROFILE";
 export type StoreStateUI = "ACTIVE" | "PAUSED" | "INACTIVE";
 
 export const PLATFORM_COMMISSION_RATE = 0.08;

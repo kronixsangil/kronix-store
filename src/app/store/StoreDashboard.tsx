@@ -21,12 +21,14 @@ import ProductsTab from "./components/tabs/ProductsTab";
 import EarningsTab from "./components/tabs/EarningsTab";
 import SettingsTab from "./components/tabs/SettingsTab";
 import ProfileTab from "./components/tabs/ProfileTab";
+import RegisterTab from "./components/tabs/RegisterTab";
 
 import { playSound } from "./lib/alerts/sound";
 import StoreTermsModal from "./components/legal/StoreTermsModal";
 import { getStoreLegalOverview } from "./lib/storeLegal";
 import StorePrivacyModal from "./components/legal/StorePrivacyModal";
 import StoreOperationalConsentModal from "./components/legal/StoreOperationalConsentModal";
+
 
 const DRIVER_WAITING_STORAGE_KEY = "ct_store_driver_waiting_v1";
 const STORE_NOTICE_STORAGE_KEY = "ct_store_notice_v1";
@@ -927,6 +929,28 @@ if (cancelled) return;
                   toggleNotify={alerts.toggleNotify}
                   soundVolume={alerts.soundVolume}
                   setSoundVolumeState={alerts.setSoundVolumeState}
+                />
+              ) : null}
+
+              {tab === "REGISTER" ? (
+                <RegisterTab
+                  storeIcon={settings.storeIcon}
+                  storeImageUrl={settings.storeImageUrl}
+                  userName={settings.userName}
+                  storeStateUI={settings.storeStateUI}
+                  autoModeLabel={settings.autoMode === "AUTO_CONFIRM" ? "Auto-confirmar" : "Auto-cancelar"}
+                  accessToken={auth.accessToken}
+                  onRefresh={handleRefresh}
+                  onLogout={handleLogout}
+                  storeName={settings.storeName}
+                  storeCityLabel={settings.storeCityLabel}
+                  storeCitySlug={settings.storeCitySlug}
+                  storeFetch={auth.storeFetch}
+                  termsAccepted={termsAccepted}
+                  privacyAccepted={privacyAccepted}
+                  operationalConsentAccepted={operationalConsentAccepted}
+                  checkingTerms={checkingTerms}
+                  onLegalStatusChanged={refreshLegalStatus}
                 />
               ) : null}
 
