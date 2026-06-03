@@ -74,6 +74,14 @@ export type ApiOrder = {
 
 export type StoreAutoDecisionMode = "AUTO_REJECT" | "AUTO_CONFIRM";
 
+export type StoreAffiliateStatus =
+  | "PENDING_VISIT"
+  | "VISITED"
+  | "DOCUMENTS_PENDING"
+  | "UNDER_REVIEW"
+  | "APPROVED"
+  | "REJECTED";
+
 export type StoreMe = {
   id: string;
   cityId?: string | null;
@@ -110,6 +118,24 @@ export type StoreMe = {
 
   onboardingStep?: number | null;
   onboardingCompleted?: boolean | null;
+
+  ownerName?: string | null;
+  ownerDocument?: string | null;
+  ownerPhone?: string | null;
+  ownerEmail?: string | null;
+  storeType?: string | null;
+  affiliateStatus?: StoreAffiliateStatus | string | null;
+  visitedAt?: string | null;
+  visitedBy?: string | null;
+  physicalDocumentsReceived?: boolean | null;
+  documentsReviewed?: boolean | null;
+  documentsApproved?: boolean | null;
+  contractSigned?: boolean | null;
+  approvedAt?: string | null;
+  approvedBy?: string | null;
+  approvalNotes?: string | null;
+  onboardingNotes?: string | null;
+  rejectedReason?: string | null;
 
   isActive: boolean;
   isPaused: boolean;

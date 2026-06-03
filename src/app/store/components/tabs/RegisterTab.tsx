@@ -1,7 +1,7 @@
 //src\app\store\components\tabs\RegisterTab.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import Image from "next/image";
 import { StoreMe, StoreStateUI } from "../../lib/storeTypes";
@@ -53,28 +53,6 @@ type RegisterForm = {
   secondaryColor: string;
 };
 
-const emptyForm: RegisterForm = {
-  name: "",
-  legalName: "",
-  nit: "",
-  businessEmail: "",
-  category: "",
-  description: "",
-  cel1: "",
-  cel2: "",
-  address: "",
-  addressReference: "",
-  hrOp: "",
-  hrCl: "",
-  image: "",
-  image2: "",
-  image3: "",
-  image4: "",
-  coverImage: "",
-  primaryColor: "",
-  secondaryColor: "",
-};
-
 function asText(value: unknown) {
   return String(value ?? "").trim();
 }
@@ -113,19 +91,99 @@ function isRealStoreName(value: string) {
   return Boolean(v && v !== "TIENDA");
 }
 
-function completionPercent(form: RegisterForm, legalCompleted: boolean) {
-  const required = [
-    form.name,
-    form.category,
-    form.cel1,
-    form.businessEmail,
-    form.address,
-    form.image,
-    legalCompleted ? "legal-ok" : "",
+function getAffiliateStatusLabel(status?: string | null) {
+  const s = String(status ?? "PENDING_VISIT").toUpperCase();
+
+  if (s === "VISITED") return "Visitado";
+  if (s === "DOCUMENTS_PENDING") return "Documentos pendientes";
+  if (s === "UNDER_REVIEW") return "En revisión";
+  if (s === "APPROVED") return "Aprobado";
+  if (s === "REJECTED") return "Rechazado";
+
+  return "Pendiente visita";
+}
+
+function getAffiliateStatusTone(status?: string | null): "green" | "amber" | "slate" | "blue" | "rose" {
+  const s = String(status ?? "PENDING_VISIT").toUpperCase();
+
+  if (s === "APPROVED") return "green";
+  if (s === "VISITED" || s === "UNDER_REVIEW") return "blue";
+  if (s === "DOCUMENTS_PENDING" || s === "PENDING_VISIT") return "amber";
+  if (s === "REJECTED") return "rose";
+
+  return "slate";
+}
+
+function hasDate(value?: string | null) {
+  return Boolean(String(value ?? "").trim());
+}
+
+function getActivationState(store: StoreMe | null, legalCompleted: boolean) {
+  const status = String(store?.affiliateStatus ?? "PENDING_VISIT").toUpperCase();
+
+  const commercialDone = Boolean(store?.name && store?.category && (store?.legalName || store?.nit));
+  const contactDone = Boolean(store?.cel1 || store?.businessEmail);
+  const addressDone = Boolean(store?.address);
+  const brandingDone = Boolean(store?.image || store?.coverImage);
+
+  const visitedDone =
+    status === "VISITED" ||
+    status === "UNDER_REVIEW" ||
+    status === "APPROVED" ||
+    hasDate(store?.visitedAt);
+
+  const docsReceivedDone = Boolean(store?.physicalDocumentsReceived);
+  const docsReviewedDone = Boolean(store?.documentsReviewed);
+  const docsApprovedDone = Boolean(store?.documentsApproved);
+  const contractDone = Boolean(store?.contractSigned);
+
+  const approvedDone =
+    status === "APPROVED" ||
+    Boolean(store?.approvedAt) ||
+    Boolean(store?.onboardingCompleted && docsApprovedDone && contractDone);
+
+  const finalActiveDone =
+    approvedDone &&
+    docsApprovedDone &&
+    contractDone &&
+    store?.isActive === true &&
+    store?.isPaused !== true;
+
+  const checks = [
+    commercialDone,
+    contactDone,
+    addressDone,
+    brandingDone,
+    legalCompleted,
+    visitedDone,
+    docsReceivedDone,
+    docsReviewedDone,
+    docsApprovedDone,
+    contractDone,
+    approvedDone,
+    finalActiveDone,
   ];
 
-  const filled = required.filter((x) => String(x ?? "").trim()).length;
-  return Math.round((filled / required.length) * 100);
+  const percent = Math.round((checks.filter(Boolean).length / checks.length) * 100);
+
+  return {
+    status,
+    statusLabel: getAffiliateStatusLabel(status),
+    statusTone: getAffiliateStatusTone(status),
+    commercialDone,
+    contactDone,
+    addressDone,
+    brandingDone,
+    legalCompleted,
+    visitedDone,
+    docsReceivedDone,
+    docsReviewedDone,
+    docsApprovedDone,
+    contractDone,
+    approvedDone,
+    finalActiveDone,
+    percent,
+  };
 }
 
 function StatusBadge({
@@ -133,7 +191,7 @@ function StatusBadge({
   tone,
 }: {
   children: ReactNode;
-  tone: "green" | "amber" | "slate" | "blue";
+  tone: "green" | "amber" | "slate" | "blue" | "rose";
 }) {
   const cls =
     tone === "green"
@@ -142,7 +200,9 @@ function StatusBadge({
         ? "bg-amber-50 text-amber-700 ring-amber-100"
         : tone === "blue"
           ? "bg-blue-50 text-blue-700 ring-blue-100"
-          : "bg-slate-50 text-slate-700 ring-slate-100";
+          : tone === "rose"
+            ? "bg-rose-50 text-rose-700 ring-rose-100"
+            : "bg-slate-50 text-slate-700 ring-slate-100";
 
   return (
     <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-black ring-1 ${cls}`}>
@@ -274,50 +334,6 @@ function PreviewImage({
   );
 }
 
-function LegalMiniCard({
-  title,
-  version,
-  accepted,
-  checking,
-  onOpen,
-}: {
-  title: string;
-  version: string;
-  accepted: boolean;
-  checking: boolean;
-  onOpen: () => void;
-}) {
-  return (
-    <div className="rounded-[18px] border border-slate-200 bg-white/94 p-4 shadow-[0_8px_20px_rgba(15,23,42,0.045)]">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-400">
-            Legal
-          </div>
-          <div className="mt-2 text-[17px] font-black leading-tight text-slate-900">
-            {title}
-          </div>
-          <div className="mt-2 text-[13px] font-medium leading-snug text-slate-500">
-            Versión: {version || "Cargando..."}
-          </div>
-        </div>
-
-        <StatusBadge tone={accepted ? "green" : "amber"}>
-          {checking ? "Verificando..." : accepted ? "Aceptado" : "Pendiente"}
-        </StatusBadge>
-      </div>
-
-      <button
-        type="button"
-        onClick={onOpen}
-        className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-[14px] bg-slate-900 px-4 text-[13px] font-extrabold text-white transition hover:bg-slate-800"
-      >
-        Ver documento
-      </button>
-    </div>
-  );
-}
-
 function ChecklistItem({
   done,
   title,
@@ -347,6 +363,29 @@ function ChecklistItem({
   );
 }
 
+function ReadOnlyInfoCard({
+  label,
+  value,
+  empty = "Pendiente",
+}: {
+  label: string;
+  value?: string | null;
+  empty?: string;
+}) {
+  const clean = String(value ?? "").trim();
+
+  return (
+    <div className="rounded-[16px] border border-slate-200 bg-slate-50 px-4 py-3">
+      <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+        {label}
+      </div>
+      <div className="mt-1 text-[13px] font-extrabold text-slate-800">
+        {clean || empty}
+      </div>
+    </div>
+  );
+}
+
 export default function RegisterTab({
   storeIcon,
   storeImageUrl = "",
@@ -366,10 +405,6 @@ export default function RegisterTab({
   checkingTerms,
   onLegalStatusChanged,
 }: Props) {
-  const [termsOpen, setTermsOpen] = useState(false);
-  const [privacyOpen, setPrivacyOpen] = useState(false);
-  const [operationalConsentOpen, setOperationalConsentOpen] = useState(false);
-
   const [legalDocs, setLegalDocs] = useState<StoreLegalDocument[]>([]);
   const [loadingDocs, setLoadingDocs] = useState(true);
 
@@ -437,20 +472,21 @@ export default function RegisterTab({
     }
   }, [storeName, storeProfile]);
 
-  const docsByType = useMemo(() => {
-    const map = new Map<string, StoreLegalDocument>();
-    for (const doc of legalDocs) map.set(doc.documentType, doc);
-    return map;
-  }, [legalDocs]);
+  const legalCompleted = termsAccepted && privacyAccepted && operationalConsentAccepted;
+  const activation = getActivationState(storeProfile, legalCompleted);
+  const percent = activation.percent;
+  const activeImage = form.image || storeImageUrl;
 
-  const termsDoc = docsByType.get("STORE_TERMS");
-  const privacyDoc = docsByType.get("STORE_PRIVACY");
-  const operationalDoc = docsByType.get("STORE_OPERATIONAL_CONSENT");
+  const displayStoreName = isRealStoreName(storeName)
+    ? storeName
+    : storeProfile?.name || form.name || "Tienda";
 
-  async function refreshLegalAfterAccept() {
-    await onLegalStatusChanged();
-    await loadLegalDocs();
-  }
+  const displayCityLabel =
+    storeCityLabel && storeCityLabel !== "Establecimiento"
+      ? storeCityLabel
+      : storeProfile?.city?.name
+        ? `${storeProfile.city.name}${storeProfile.city.department ? `, ${storeProfile.city.department}` : ""}`
+        : "Sin ciudad";
 
   async function saveRegister() {
     if (savingProfile) return;
@@ -515,22 +551,6 @@ export default function RegisterTab({
     }
   }
 
-  const legalChecking = checkingTerms || loadingDocs;
-  const legalCompleted = termsAccepted && privacyAccepted && operationalConsentAccepted;
-  const percent = completionPercent(form, legalCompleted);
-  const activeImage = form.image || storeImageUrl;
-
-  const displayStoreName = isRealStoreName(storeName)
-    ? storeName
-    : storeProfile?.name || form.name || "Tienda";
-
-  const displayCityLabel =
-    storeCityLabel && storeCityLabel !== "Establecimiento"
-      ? storeCityLabel
-      : storeProfile?.city?.name
-        ? `${storeProfile.city.name}${storeProfile.city.department ? `, ${storeProfile.city.department}` : ""}`
-        : "Sin ciudad";
-
   return (
     <>
       <div className="ct-tab-frame flex h-full min-h-0 flex-col gap-3 overflow-hidden">
@@ -552,8 +572,13 @@ export default function RegisterTab({
                   <div className="truncate text-[26px] font-black leading-tight text-white">
                     Registro del Comercio
                   </div>
+
                   <StatusBadge tone={storeStateUI === "ACTIVE" ? "green" : storeStateUI === "PAUSED" ? "amber" : "slate"}>
                     {storeStateUI === "ACTIVE" ? "Activa" : storeStateUI === "PAUSED" ? "En pausa" : "Inactiva"}
+                  </StatusBadge>
+
+                  <StatusBadge tone={activation.statusTone}>
+                    Afiliación: {activation.statusLabel}
                   </StatusBadge>
                 </div>
 
@@ -565,8 +590,8 @@ export default function RegisterTab({
                 </div>
 
                 <div className="mt-3 max-w-3xl text-[13px] font-medium leading-snug text-slate-300">
-                  Completa los datos comerciales, contacto, horarios y branding. Los geopuntos
-                  exactos, pickup y validación documental se gestionan desde CTCC durante la visita.
+                  Completa los datos comerciales, contacto, horarios y branding. La visita,
+                  documentos, contrato y activación final son validados por KroniX desde CTCC.
                 </div>
               </div>
             </div>
@@ -575,14 +600,14 @@ export default function RegisterTab({
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
-                    Registro completo
+                    Activación KroniX
                   </div>
                   <div className="mt-1 text-[28px] font-black text-white">
                     {percent}%
                   </div>
                 </div>
                 <div className="grid h-12 w-12 place-items-center rounded-full bg-white text-[18px] font-black text-slate-950">
-                  {storeProfile?.onboardingCompleted ? "✓" : "↗"}
+                  {activation.finalActiveDone ? "✓" : "↗"}
                 </div>
               </div>
 
@@ -594,12 +619,21 @@ export default function RegisterTab({
               </div>
 
               <div className="mt-2 text-[12px] font-semibold text-slate-300">
-                Paso {storeProfile?.onboardingStep ?? 1} •{" "}
-                {storeProfile?.onboardingCompleted ? "Completado" : "En proceso"}
+                {activation.finalActiveDone
+                  ? "Lista para operar"
+                  : `Afiliación: ${activation.statusLabel}`}
               </div>
             </div>
           </div>
         </div>
+
+        {!activation.finalActiveDone ? (
+          <div className="rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] font-bold leading-6 text-amber-900">
+            Tu tienda todavía no está activada para operar completamente. Puedes completar tu
+            registro, pero la operación final depende de la visita, revisión documental, contrato
+            y aprobación de KroniX desde CTCC.
+          </div>
+        ) : null}
 
         <div className="min-h-0 flex-1 overflow-y-auto rounded-[24px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.84)_0%,rgba(248,250,252,0.96)_100%)] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
@@ -642,16 +676,54 @@ export default function RegisterTab({
               <SectionCard
                 eyebrow="Activación KroniX"
                 title="Checklist"
-                description="Estado visible para la tienda. La visita y aprobación final las gestiona KroniX desde CTCC."
+                description="Estado real sincronizado con CTCC."
               >
                 <div className="grid gap-3">
-                  <ChecklistItem done={Boolean(form.name && form.category)} title="Información comercial" helper="Nombre, razón social, NIT y categoría." />
-                  <ChecklistItem done={Boolean(form.cel1 || form.businessEmail)} title="Contacto" helper="Teléfono y correo comercial." />
-                  <ChecklistItem done={Boolean(form.address)} title="Dirección" helper="Dirección base del establecimiento." />
-                  <ChecklistItem done={Boolean(form.image || form.coverImage)} title="Branding" helper="Logo, portada o imágenes." />
-                  <ChecklistItem done={false} title="Visita KroniX" helper="Pendiente de validación presencial." />
-                  <ChecklistItem done={false} title="Activación final" helper="Aprobación desde CTCC." />
+                  <ChecklistItem done={activation.commercialDone} title="Información comercial" helper="Nombre, razón social, NIT y categoría." />
+                  <ChecklistItem done={activation.contactDone} title="Contacto" helper="Teléfono o correo comercial." />
+                  <ChecklistItem done={activation.addressDone} title="Dirección" helper="Dirección base del establecimiento." />
+                  <ChecklistItem done={activation.brandingDone} title="Branding" helper="Logo, portada o imágenes." />
+                  <ChecklistItem done={activation.legalCompleted} title="Legal Store" helper="Términos, privacidad y consentimiento aceptados." />
+                  <ChecklistItem done={activation.visitedDone} title="Visita KroniX" helper={activation.visitedDone ? "Visita registrada desde CTCC." : "Pendiente de validación presencial."} />
+                  <ChecklistItem done={activation.docsReceivedDone} title="Documentos recibidos" helper="Documentación física o soportes recibidos." />
+                  <ChecklistItem done={activation.docsReviewedDone} title="Documentos revisados" helper="Revisión interna de KroniX." />
+                  <ChecklistItem done={activation.docsApprovedDone} title="Documentos aprobados" helper="Documentación validada por KroniX." />
+                  <ChecklistItem done={activation.contractDone} title="Contrato firmado" helper="Acuerdo comercial firmado." />
+                  <ChecklistItem done={activation.approvedDone} title="Aprobación final" helper="Aprobación administrativa desde CTCC." />
+                  <ChecklistItem done={activation.finalActiveDone} title="Activación operativa" helper="Lista para operar en KroniX." />
                 </div>
+              </SectionCard>
+            </div>
+
+            <div className="xl:col-span-3">
+              <SectionCard
+                eyebrow="Estado CTCC"
+                title="Validación interna KroniX"
+                description="Esta información es de solo lectura para la tienda y se actualiza desde CTCC."
+              >
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <ReadOnlyInfoCard label="Estado afiliación" value={activation.statusLabel} />
+                  <ReadOnlyInfoCard label="Fecha visita" value={storeProfile?.visitedAt ? String(storeProfile.visitedAt).slice(0, 10) : ""} />
+                  <ReadOnlyInfoCard label="Visitado por" value={storeProfile?.visitedBy} />
+                  <ReadOnlyInfoCard label="Fecha aprobación" value={storeProfile?.approvedAt ? String(storeProfile.approvedAt).slice(0, 10) : ""} />
+                  <ReadOnlyInfoCard label="Aprobado por" value={storeProfile?.approvedBy} />
+                  <ReadOnlyInfoCard label="Contrato" value={storeProfile?.contractSigned ? "Firmado" : "Pendiente"} />
+                  <ReadOnlyInfoCard label="Documentos recibidos" value={storeProfile?.physicalDocumentsReceived ? "Sí" : "No"} />
+                  <ReadOnlyInfoCard label="Documentos revisados" value={storeProfile?.documentsReviewed ? "Sí" : "No"} />
+                  <ReadOnlyInfoCard label="Documentos aprobados" value={storeProfile?.documentsApproved ? "Sí" : "No"} />
+                </div>
+
+                {storeProfile?.approvalNotes ? (
+                  <div className="mt-4 rounded-[16px] border border-emerald-100 bg-emerald-50 p-4 text-[13px] font-semibold leading-6 text-emerald-900">
+                    <b>Observaciones de aprobación:</b> {storeProfile.approvalNotes}
+                  </div>
+                ) : null}
+
+                {storeProfile?.rejectedReason ? (
+                  <div className="mt-4 rounded-[16px] border border-rose-100 bg-rose-50 p-4 text-[13px] font-semibold leading-6 text-rose-900">
+                    <b>Motivo de rechazo:</b> {storeProfile.rejectedReason}
+                  </div>
+                ) : null}
               </SectionCard>
             </div>
 
@@ -672,8 +744,7 @@ export default function RegisterTab({
                   </div>
                   <div className="mt-1 text-[13px] font-semibold leading-6 text-blue-900/75">
                     Durante la visita al establecimiento, el equipo KroniX definirá coordenadas exactas,
-                    entrada principal, punto de recogida para drivers y zona operativa. Esto evita errores
-                    del comercio y mantiene el control profesional de la operación.
+                    entrada principal, punto de recogida para drivers y zona operativa.
                   </div>
                 </div>
               </SectionCard>
@@ -737,11 +808,9 @@ export default function RegisterTab({
                 </div>
               </SectionCard>
             </div>
-
-            
           </div>
         </div>
-      </div>      
+      </div>
     </>
   );
 }

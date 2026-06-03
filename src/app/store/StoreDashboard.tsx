@@ -29,7 +29,6 @@ import { getStoreLegalOverview } from "./lib/storeLegal";
 import StorePrivacyModal from "./components/legal/StorePrivacyModal";
 import StoreOperationalConsentModal from "./components/legal/StoreOperationalConsentModal";
 
-
 const DRIVER_WAITING_STORAGE_KEY = "ct_store_driver_waiting_v1";
 const STORE_NOTICE_STORAGE_KEY = "ct_store_notice_v1";
 
@@ -37,6 +36,50 @@ function shortOrderId(id?: string | null) {
   const clean = String(id ?? "").trim();
   if (!clean) return "------";
   return clean.slice(-6);
+}
+
+function getStoreActivationState(storeMe: any) {
+  if (!storeMe) {
+    return {
+      finalActiveDone: false,
+      statusLabel: "Cargando",
+    };
+  }
+
+  const status = String(storeMe?.affiliateStatus ?? "PENDING_VISIT").toUpperCase();
+
+  const docsApproved = Boolean(storeMe?.documentsApproved);
+  const contractSigned = Boolean(storeMe?.contractSigned);
+
+  const approved =
+    status === "APPROVED" ||
+    Boolean(storeMe?.approvedAt) ||
+    Boolean(storeMe?.onboardingCompleted && docsApproved && contractSigned);
+
+  const finalActiveDone =
+    approved &&
+    docsApproved &&
+    contractSigned &&
+    storeMe?.isActive === true &&
+    storeMe?.isPaused !== true;
+
+  const statusLabel =
+    status === "APPROVED"
+      ? "Aprobado"
+      : status === "VISITED"
+        ? "Visitado"
+        : status === "UNDER_REVIEW"
+          ? "En revisión"
+          : status === "DOCUMENTS_PENDING"
+            ? "Documentos pendientes"
+            : status === "REJECTED"
+              ? "Rechazado"
+              : "Pendiente visita";
+
+  return {
+    finalActiveDone,
+    statusLabel,
+  };
 }
 
 function loadDriverWaitingMap(): Record<
@@ -134,11 +177,9 @@ function saveStoreNotice(input: {
 export default function StoreDashboard() {
   const [tab, setTabState] = useState<TabKey>("ORDERS");
   const [termsAccepted, setTermsAccepted] = useState(false);
-
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
-const [operationalConsentAccepted, setOperationalConsentAccepted] =
-  useState(false);
-const [checkingTerms, setCheckingTerms] = useState(true);
+  const [operationalConsentAccepted, setOperationalConsentAccepted] = useState(false);
+  const [checkingTerms, setCheckingTerms] = useState(true);
 
   const auth = useStoreAuth();
 
@@ -216,22 +257,22 @@ const [checkingTerms, setCheckingTerms] = useState(true);
   }
 
   async function refreshLegalStatus() {
-  setCheckingTerms(true);
+    setCheckingTerms(true);
 
-  try {
-    const overview = await getStoreLegalOverview(auth.storeFetch);
+    try {
+      const overview = await getStoreLegalOverview(auth.storeFetch);
 
-    setTermsAccepted(overview.termsAccepted);
-    setPrivacyAccepted(overview.privacyAccepted);
-    setOperationalConsentAccepted(overview.operationalConsentAccepted);
-  } catch {
-    setTermsAccepted(false);
-    setPrivacyAccepted(false);
-    setOperationalConsentAccepted(false);
-  } finally {
-    setCheckingTerms(false);
+      setTermsAccepted(overview.termsAccepted);
+      setPrivacyAccepted(overview.privacyAccepted);
+      setOperationalConsentAccepted(overview.operationalConsentAccepted);
+    } catch {
+      setTermsAccepted(false);
+      setPrivacyAccepted(false);
+      setOperationalConsentAccepted(false);
+    } finally {
+      setCheckingTerms(false);
+    }
   }
-}
 
   useEffect(() => {
     let cancelled = false;
@@ -245,9 +286,8 @@ const [checkingTerms, setCheckingTerms] = useState(true);
       if (!accessOk || cancelled) return;
 
       await refreshLegalStatus();
-if (cancelled) return;
-
       if (cancelled) return;
+
       await orders.load();
       await settings.loadStoreMe();
       await products.loadProducts();
@@ -329,10 +369,10 @@ if (cancelled) return;
       });
 
       alerts.fireOperationalAlert(
-  "🛵 Conductor en tienda",
-  `${driverName} ya está esperando en tienda.`,
-  "DRIVER_ARRIVED"
-);
+        "🛵 Conductor en tienda",
+        `${driverName} ya está esperando en tienda.`,
+        "DRIVER_ARRIVED"
+      );
     }
 
     es.onmessage = async (event) => {
@@ -619,6 +659,18 @@ if (cancelled) return;
     };
   }, [settings.storeMe]);
 
+  const storeActivation = useMemo(() => {
+    return getStoreActivationState(settings.storeMe);
+  }, [settings.storeMe]);
+
+  const storeMustWaitActivation =
+    auth.authChecked &&
+    Boolean(auth.accessToken?.trim()) &&
+    !auth.checkingRole &&
+    !checkingTerms &&
+    Boolean(settings.storeMe) &&
+    !storeActivation.finalActiveDone;
+
   if (!auth.authChecked) {
     return (
       <main className="min-h-screen ct-store-bg ct-tablet">
@@ -689,139 +741,179 @@ if (cancelled) return;
   }
 
   if (
-  auth.authChecked &&
-  auth.accessToken?.trim() &&
-  !auth.checkingRole &&
-  !checkingTerms &&
-  !(termsAccepted && privacyAccepted && operationalConsentAccepted)
-) {
+    auth.authChecked &&
+    auth.accessToken?.trim() &&
+    !auth.checkingRole &&
+    !checkingTerms &&
+    !(termsAccepted && privacyAccepted && operationalConsentAccepted)
+  ) {
+    return (
+      <StoreCityProvider value={cityContextValue}>
+        <main className="min-h-screen w-screen overflow-hidden ct-store-bg ct-tablet">
+          <div className="h-screen w-screen px-2 py-2">
+            <div className="overflow-hidden rounded-[22px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(248,250,252,0.95)_100%)] shadow-[0_20px_60px_rgba(15,23,42,0.10)] backdrop-blur">
+              <StoreDashboardHeader
+                tab="PROFILE"
+                setTabSafe={setTabSafe}
+                storeName={settings.storeName}
+                storeIcon={settings.storeIcon}
+                storeImageUrl={settings.storeImageUrl}
+                storeCityLabel={settings.storeCityLabel}
+                inputStoreCode={auth.inputStoreCode}
+                setInputStoreCode={auth.setInputStoreCode}
+                applyStoreCode={auth.applyStoreCode}
+                accessToken={auth.accessToken}
+                soundEnabled={alerts.soundEnabled}
+                toggleSound={alerts.toggleSound}
+                testSound={alerts.testSound}
+                notifyEnabled={alerts.notifyEnabled}
+                toggleNotify={alerts.toggleNotify}
+                onRefresh={handleRefresh}
+                onLogout={handleLogout}
+                soundVolume={alerts.soundVolume}
+                setSoundVolumeState={alerts.setSoundVolumeState}
+                storeStateUI={settings.storeStateUI}
+                savingStoreState={settings.savingStoreState}
+                saveStoreOperationalState={settings.saveStoreOperationalState}
+                userName={settings.userName}
+                pausedReason={settings.storeMe?.pausedReason ?? null}
+                err={orders.err}
+              />
+
+              <div className="px-2 pb-2 pt-2">
+                <div className="ct-tab-frame flex flex-col gap-3">
+                  <div className="rounded-[20px] border border-white/60 bg-white/92 p-5 shadow-[0_8px_18px_rgba(15,23,42,0.05)]">
+                    <div className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">
+                      Acción requerida
+                    </div>
+
+                    <h1 className="mt-2 text-[28px] font-black leading-none text-slate-950">
+                      Aceptación legal pendiente
+                    </h1>
+
+                    <p className="mt-3 max-w-[720px] text-[14px] font-medium leading-6 text-slate-600">
+                      Para operar en KroniX Store, recibir pedidos, administrar productos
+                      y gestionar órdenes, debes revisar y aceptar los documentos legales
+                      vigentes para comercios.
+                    </p>
+                  </div>
+                </div>
+
+                {!termsAccepted ? (
+                  <StoreTermsModal
+                    open
+                    force
+                    storeFetch={auth.storeFetch}
+                    onClose={() => {}}
+                    onAccepted={async () => {
+                      await refreshLegalStatus();
+                      setTabSafe("PROFILE");
+                    }}
+                  />
+                ) : !privacyAccepted ? (
+                  <StorePrivacyModal
+                    open
+                    force
+                    storeFetch={auth.storeFetch}
+                    onClose={() => {}}
+                    onAccepted={async () => {
+                      await refreshLegalStatus();
+                      setTabSafe("PROFILE");
+                    }}
+                  />
+                ) : !operationalConsentAccepted ? (
+                  <StoreOperationalConsentModal
+                    open
+                    force
+                    storeFetch={auth.storeFetch}
+                    onClose={() => {}}
+                    onAccepted={async () => {
+                      await refreshLegalStatus();
+                      setTabSafe("PROFILE");
+                    }}
+                  />
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </main>
+      </StoreCityProvider>
+    );
+  }
+
+  if (storeMustWaitActivation) {
+    return (
+      <StoreCityProvider value={cityContextValue}>
+        <main className="min-h-screen w-screen overflow-hidden ct-store-bg ct-tablet">
+          <div className="h-screen w-screen px-2 py-2">
+            <div className="overflow-hidden rounded-[22px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(248,250,252,0.95)_100%)] shadow-[0_20px_60px_rgba(15,23,42,0.10)] backdrop-blur">
+              <StoreDashboardHeader
+                tab="REGISTER"
+                setTabSafe={() => setTabSafe("REGISTER")}
+                storeName={settings.storeName}
+                storeIcon={settings.storeIcon}
+                storeImageUrl={settings.storeImageUrl}
+                storeCityLabel={settings.storeCityLabel}
+                inputStoreCode={auth.inputStoreCode}
+                setInputStoreCode={auth.setInputStoreCode}
+                applyStoreCode={auth.applyStoreCode}
+                accessToken={auth.accessToken}
+                soundEnabled={alerts.soundEnabled}
+                toggleSound={alerts.toggleSound}
+                testSound={alerts.testSound}
+                notifyEnabled={alerts.notifyEnabled}
+                toggleNotify={alerts.toggleNotify}
+                onRefresh={handleRefresh}
+                onLogout={handleLogout}
+                soundVolume={alerts.soundVolume}
+                setSoundVolumeState={alerts.setSoundVolumeState}
+                storeStateUI={settings.storeStateUI}
+                savingStoreState={settings.savingStoreState}
+                saveStoreOperationalState={settings.saveStoreOperationalState}
+                userName={settings.userName}
+                pausedReason={settings.storeMe?.pausedReason ?? null}
+                err={orders.err}
+              />
+
+              <div className="px-2 pb-2 pt-2">
+                <div className="mb-2 rounded-[18px] border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] font-bold leading-6 text-amber-900">
+                  Operación pendiente de activación KroniX. Estado actual:{" "}
+                  <span className="font-black">{storeActivation.statusLabel}</span>. Por seguridad,
+                  el panel operativo queda bloqueado hasta que CTCC registre documentos aprobados,
+                  contrato firmado y aprobación final.
+                </div>
+
+                <RegisterTab
+                  storeIcon={settings.storeIcon}
+                  storeImageUrl={settings.storeImageUrl}
+                  userName={settings.userName}
+                  storeStateUI={settings.storeStateUI}
+                  autoModeLabel={settings.autoMode === "AUTO_CONFIRM" ? "Auto-confirmar" : "Auto-cancelar"}
+                  accessToken={auth.accessToken}
+                  onRefresh={handleRefresh}
+                  onLogout={handleLogout}
+                  storeName={settings.storeName}
+                  storeCityLabel={settings.storeCityLabel}
+                  storeCitySlug={settings.storeCitySlug}
+                  storeFetch={auth.storeFetch}
+                  termsAccepted={termsAccepted}
+                  privacyAccepted={privacyAccepted}
+                  operationalConsentAccepted={operationalConsentAccepted}
+                  checkingTerms={checkingTerms}
+                  onLegalStatusChanged={refreshLegalStatus}
+                />
+              </div>
+            </div>
+          </div>
+        </main>
+      </StoreCityProvider>
+    );
+  }
+
   return (
     <StoreCityProvider value={cityContextValue}>
       <main className="min-h-screen w-screen overflow-hidden ct-store-bg ct-tablet">
         <div className="h-screen w-screen px-2 py-2">
-          <div className="overflow-hidden rounded-[22px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(248,250,252,0.95)_100%)] shadow-[0_20px_60px_rgba(15,23,42,0.10)] backdrop-blur">
-            <StoreDashboardHeader
-              tab="PROFILE"
-              setTabSafe={setTabSafe}
-              storeName={settings.storeName}
-              storeIcon={settings.storeIcon}
-              storeImageUrl={settings.storeImageUrl}
-              storeCityLabel={settings.storeCityLabel}
-              inputStoreCode={auth.inputStoreCode}
-              setInputStoreCode={auth.setInputStoreCode}
-              applyStoreCode={auth.applyStoreCode}
-              accessToken={auth.accessToken}
-              soundEnabled={alerts.soundEnabled}
-              toggleSound={alerts.toggleSound}
-              testSound={alerts.testSound}
-              notifyEnabled={alerts.notifyEnabled}
-              toggleNotify={alerts.toggleNotify}
-              onRefresh={handleRefresh}
-              onLogout={handleLogout}
-              soundVolume={alerts.soundVolume}
-              setSoundVolumeState={alerts.setSoundVolumeState}
-              storeStateUI={settings.storeStateUI}
-              savingStoreState={settings.savingStoreState}
-              saveStoreOperationalState={settings.saveStoreOperationalState}
-              userName={settings.userName}
-              pausedReason={settings.storeMe?.pausedReason ?? null}
-              err={orders.err}
-            />
-
-            <div className="px-2 pb-2 pt-2">
-              <div className="ct-tab-frame flex flex-col gap-3">
-                <div className="rounded-[20px] border border-white/60 bg-white/92 p-5 shadow-[0_8px_18px_rgba(15,23,42,0.05)]">
-                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">
-                    Acción requerida
-                  </div>
-
-                  <h1 className="mt-2 text-[28px] font-black leading-none text-slate-950">
-                    Aceptación legal pendiente
-                  </h1>
-
-                  <p className="mt-3 max-w-[720px] text-[14px] font-medium leading-6 text-slate-600">
-                    Para operar en KroniX Store, recibir pedidos, administrar productos
-                    y gestionar órdenes, debes revisar y aceptar los documentos legales 
-                    vigentes para comercios.
-                  </p>
-
-                  <div className="mt-5 grid gap-3 md:grid-cols-3">
-                    <div className="rounded-[16px] border border-emerald-200 bg-emerald-50 p-4">
-                      <div className="text-[13px] font-black text-emerald-800">
-                        Lectura obligatoria
-                      </div>
-                      <div className="mt-1 text-[12px] font-medium text-emerald-900/80">
-                        Debes llegar al final del documento.
-                      </div>
-                    </div>
-
-                    <div className="rounded-[16px] border border-blue-200 bg-blue-50 p-4">
-                      <div className="text-[13px] font-black text-blue-800">
-                        Versión controlada
-                      </div>
-                      <div className="mt-1 text-[12px] font-medium text-blue-900/80">
-                        Si cambia la versión, se solicitará nueva aceptación.
-                      </div>
-                    </div>
-
-                    <div className="rounded-[16px] border border-slate-200 bg-white p-4">
-                      <div className="text-[13px] font-black text-slate-800">
-                        Registro legal
-                      </div>
-                      <div className="mt-1 text-[12px] font-medium text-slate-600">
-                        La aceptación se guarda en backend con trazabilidad.
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {!termsAccepted ? (
-  <StoreTermsModal
-    open
-    force
-    storeFetch={auth.storeFetch}
-    onClose={() => {}}
-    onAccepted={async () => {
-      await refreshLegalStatus();
-      setTabSafe("PROFILE");
-    }}
-  />
-) : !privacyAccepted ? (
-  <StorePrivacyModal
-    open
-    force
-    storeFetch={auth.storeFetch}
-    onClose={() => {}}
-    onAccepted={async () => {
-      await refreshLegalStatus();
-      setTabSafe("PROFILE");
-    }}
-  />
-) : !operationalConsentAccepted ? (
-  <StoreOperationalConsentModal
-    open
-    force
-    storeFetch={auth.storeFetch}
-    onClose={() => {}}
-    onAccepted={async () => {
-      await refreshLegalStatus();
-      setTabSafe("PROFILE");
-    }}
-  />
-) : null}
-            </div>
-          </div>
-        </div>
-      </main>
-    </StoreCityProvider>
-  );
-}
-
-  return (
-    <StoreCityProvider value={cityContextValue}>
-      <main className="min-h-screen w-screen overflow-hidden ct-store-bg ct-tablet">
-  <div className="h-screen w-screen px-2 py-2">
           <div className="overflow-hidden rounded-[22px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(248,250,252,0.95)_100%)] shadow-[0_20px_60px_rgba(15,23,42,0.10)] backdrop-blur">
             <StoreDashboardHeader
               tab={tab}
@@ -880,19 +972,19 @@ if (cancelled) return;
               ) : null}
 
               {tab === "PRODUCTS" ? (
-  <ProductsTab
-    products={products.products}
-    loading={products.loading}
-    err={products.err}
-    saving={products.saving}
-    deletingId={products.deletingId}
-    permissions={settings.storeMe}
-    onRefresh={products.loadProducts}
-    onCreate={products.createProduct}
-    onUpdate={products.updateProduct}
-    onDelete={products.deleteProduct}
-  />
-) : null}
+                <ProductsTab
+                  products={products.products}
+                  loading={products.loading}
+                  err={products.err}
+                  saving={products.saving}
+                  deletingId={products.deletingId}
+                  permissions={settings.storeMe}
+                  onRefresh={products.loadProducts}
+                  onCreate={products.createProduct}
+                  onUpdate={products.updateProduct}
+                  onDelete={products.deleteProduct}
+                />
+              ) : null}
 
               {tab === "EARNINGS" ? (
                 <EarningsTab
@@ -967,7 +1059,7 @@ if (cancelled) return;
                   storeName={settings.storeName}
                   storeCityLabel={settings.storeCityLabel}
                   storeCitySlug={settings.storeCitySlug}
-                  storeFetch={auth.storeFetch}  
+                  storeFetch={auth.storeFetch}
                   termsAccepted={termsAccepted}
                   privacyAccepted={privacyAccepted}
                   operationalConsentAccepted={operationalConsentAccepted}
