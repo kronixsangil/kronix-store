@@ -7,6 +7,8 @@ import {
   PrintPaperSize,
   PrintPrefs,
   StoreAutoDecisionMode,
+  StoreMe,
+  StorePaymentInfoDraft,
   StoreStateUI,
 } from "../../lib/storeTypes";
 
@@ -36,6 +38,13 @@ type Props = {
   toggleNotify: () => void | Promise<void>;
   soundVolume: number;
   setSoundVolumeState: Dispatch<SetStateAction<number>>;
+
+  storeMe?: StoreMe | null;
+  paymentInfoDraft?: StorePaymentInfoDraft;
+  setPaymentInfoDraft?: Dispatch<SetStateAction<StorePaymentInfoDraft>>;
+  savingPaymentInfo?: boolean;
+  paymentInfoMsg?: string | null;
+  savePaymentInfo?: () => void | Promise<void>;
 };
 
 function SectionCard({
@@ -83,6 +92,44 @@ function FieldBox({
   );
 }
 
+function TextInput({
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  type?: string;
+}) {
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="h-10 w-full rounded-[12px] border border-slate-200 bg-white px-3 text-[13px] font-bold text-slate-900 outline-none transition placeholder:text-slate-300 focus:ring-2 focus:ring-emerald-200"
+    />
+  );
+}
+
+function statusText(status?: string | null) {
+  const s = String(status ?? "NONE").toUpperCase();
+  if (s === "PENDING") return "Pendiente aprobación CTCC";
+  if (s === "APPROVED") return "Aprobada por KroniX";
+  if (s === "REJECTED") return "Rechazada";
+  return "Sin configurar";
+}
+
+function statusClass(status?: string | null) {
+  const s = String(status ?? "NONE").toUpperCase();
+  if (s === "PENDING") return "bg-amber-50 text-amber-800 ring-amber-100";
+  if (s === "APPROVED") return "bg-emerald-50 text-emerald-800 ring-emerald-100";
+  if (s === "REJECTED") return "bg-rose-50 text-rose-800 ring-rose-100";
+  return "bg-slate-50 text-slate-700 ring-slate-100";
+}
+
 export default function SettingsTab({
   savingAuto,
   saveAutoDecision,
@@ -99,13 +146,43 @@ export default function SettingsTab({
   toggleNotify,
   soundVolume,
   setSoundVolumeState,
+  storeMe,
+  paymentInfoDraft,
+  setPaymentInfoDraft,
+  savingPaymentInfo = false,
+  paymentInfoMsg,
+  savePaymentInfo,
 }: Props) {
+  const paymentDraft: StorePaymentInfoDraft =
+    paymentInfoDraft ?? {
+      storePayoutMethod: "BANK_ACCOUNT",
+      storePayoutBankName: "",
+      storePayoutAccountType: "AHORROS",
+      storePayoutAccountNumber: "",
+      storePayoutAccountHolder: "",
+      storePayoutAccountDocument: "",
+      storePayoutNequiPhone: "",
+      storePayoutDaviplataPhone: "",
+      storePayoutBillingEmail: "",
+      storePayoutTaxResponsibility: "",
+      storePayoutTaxNotes: "",
+    };
+
+  function setPaymentField<K extends keyof StorePaymentInfoDraft>(
+    key: K,
+    value: StorePaymentInfoDraft[K]
+  ) {
+    setPaymentInfoDraft?.((prev) => ({ ...prev, [key]: value }));
+  }
+
+  const method = paymentDraft.storePayoutMethod;
+
   return (
     <div className="ct-panel ct-tab-frame h-full min-h-0 overflow-y-auto p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <div className="rounded-[18px] border border-white/70 bg-white/70 px-4 py-3">
         <div className="ct-section-title">Configuración</div>
         <div className="mt-1 ct-section-desc">
-          Ajustes operativos, impresión y alertas de la tienda.
+          Ajustes operativos, impresión, alertas e información de pago de la tienda.
         </div>
       </div>
 
@@ -208,6 +285,150 @@ export default function SettingsTab({
                     className="w-full max-w-[240px]"
                   />
                 </div>
+              </div>
+            </div>
+          </SectionCard>
+
+          <SectionCard
+            title="Información de pago"
+            desc="Estos datos serán revisados por KroniX antes de habilitar o cambiar la cuenta de pagos."
+            action={
+              <div className="flex items-center gap-2">
+                <span
+                  className={[
+                    "inline-flex rounded-full px-3 py-1 text-[11px] font-black ring-1",
+                    statusClass(storeMe?.storePayoutInfoStatus),
+                  ].join(" ")}
+                >
+                  {statusText(storeMe?.storePayoutInfoStatus)}
+                </span>
+
+                <button
+                  type="button"
+                  disabled={savingPaymentInfo || !savePaymentInfo}
+                  onClick={() => savePaymentInfo?.()}
+                  className="inline-flex h-8 items-center justify-center rounded-full bg-slate-900 px-4 text-[12px] font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-60"
+                >
+                  {savingPaymentInfo ? "Enviando…" : "Enviar a validación"}
+                </button>
+              </div>
+            }
+          >
+            <div className="grid gap-2">
+              {paymentInfoMsg ? (
+                <div className="rounded-[14px] border border-blue-100 bg-blue-50 px-3 py-2 text-[12px] font-bold leading-5 text-blue-900">
+                  {paymentInfoMsg}
+                </div>
+              ) : null}
+
+              <div className="rounded-[14px] border border-amber-100 bg-amber-50 px-3 py-2 text-[12px] font-semibold leading-5 text-amber-900">
+                Por seguridad, cualquier cambio queda pendiente. CTCC valida titularidad, documento y cuenta real antes de aprobar.
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <FieldBox label="Medio de pago">
+                  <select
+                    value={paymentDraft.storePayoutMethod}
+                    onChange={(e) => setPaymentField("storePayoutMethod", e.target.value as any)}
+                    className="h-10 w-full rounded-[12px] border border-slate-200 bg-white px-3 text-[13px] font-bold text-slate-900 outline-none"
+                  >
+                    <option value="BANK_ACCOUNT">Cuenta bancaria</option>
+                    <option value="NEQUI">Nequi</option>
+                    <option value="DAVIPLATA">Daviplata</option>
+                  </select>
+                </FieldBox>
+
+                <FieldBox label="Titular de la cuenta">
+                  <TextInput
+                    value={paymentDraft.storePayoutAccountHolder}
+                    onChange={(v) => setPaymentField("storePayoutAccountHolder", v)}
+                    placeholder="Nombre del propietario o empresa"
+                  />
+                </FieldBox>
+
+                <FieldBox label="Documento / NIT del titular">
+                  <TextInput
+                    value={paymentDraft.storePayoutAccountDocument}
+                    onChange={(v) => setPaymentField("storePayoutAccountDocument", v)}
+                    placeholder="Documento o NIT"
+                  />
+                </FieldBox>
+
+                <FieldBox label="Email de facturación">
+                  <TextInput
+                    type="email"
+                    value={paymentDraft.storePayoutBillingEmail}
+                    onChange={(v) => setPaymentField("storePayoutBillingEmail", v)}
+                    placeholder="facturacion@negocio.com"
+                  />
+                </FieldBox>
+
+                {method === "BANK_ACCOUNT" ? (
+                  <>
+                    <FieldBox label="Banco">
+                      <TextInput
+                        value={paymentDraft.storePayoutBankName}
+                        onChange={(v) => setPaymentField("storePayoutBankName", v)}
+                        placeholder="Ej: Bancolombia, Davivienda"
+                      />
+                    </FieldBox>
+
+                    <FieldBox label="Tipo de cuenta">
+                      <select
+                        value={paymentDraft.storePayoutAccountType || "AHORROS"}
+                        onChange={(e) => setPaymentField("storePayoutAccountType", e.target.value as any)}
+                        className="h-10 w-full rounded-[12px] border border-slate-200 bg-white px-3 text-[13px] font-bold text-slate-900 outline-none"
+                      >
+                        <option value="AHORROS">Ahorros</option>
+                        <option value="CORRIENTE">Corriente</option>
+                      </select>
+                    </FieldBox>
+
+                    <FieldBox label="Número de cuenta">
+                      <TextInput
+                        value={paymentDraft.storePayoutAccountNumber}
+                        onChange={(v) => setPaymentField("storePayoutAccountNumber", v)}
+                        placeholder="Número de cuenta"
+                      />
+                    </FieldBox>
+                  </>
+                ) : null}
+
+                {method === "NEQUI" ? (
+                  <FieldBox label="Número Nequi">
+                    <TextInput
+                      value={paymentDraft.storePayoutNequiPhone}
+                      onChange={(v) => setPaymentField("storePayoutNequiPhone", v)}
+                      placeholder="Celular Nequi"
+                    />
+                  </FieldBox>
+                ) : null}
+
+                {method === "DAVIPLATA" ? (
+                  <FieldBox label="Número Daviplata">
+                    <TextInput
+                      value={paymentDraft.storePayoutDaviplataPhone}
+                      onChange={(v) => setPaymentField("storePayoutDaviplataPhone", v)}
+                      placeholder="Celular Daviplata"
+                    />
+                  </FieldBox>
+                ) : null}
+
+                <FieldBox label="Responsabilidad tributaria">
+                  <TextInput
+                    value={paymentDraft.storePayoutTaxResponsibility}
+                    onChange={(v) => setPaymentField("storePayoutTaxResponsibility", v)}
+                    placeholder="Ej: Régimen simple, responsable IVA..."
+                  />
+                </FieldBox>
+
+                <FieldBox label="Notas tributarias">
+                  <TextInput
+                    value={paymentDraft.storePayoutTaxNotes}
+                    onChange={(v) => setPaymentField("storePayoutTaxNotes", v)}
+                    placeholder="Observaciones de facturación o impuestos"
+                  />
+                </FieldBox>
               </div>
             </div>
           </SectionCard>

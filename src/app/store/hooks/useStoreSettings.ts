@@ -8,12 +8,54 @@ import {
   StoreAutoDecisionMode,
   StoreMe,
   StoreStateUI,
+  StorePaymentInfoDraft,
 } from "../lib/storeTypes";
 import {
   getStoreIconByName,
   loadPrintPrefs,
   savePrintPrefs,
 } from "../lib/storeUtils";
+
+
+const DEFAULT_PAYMENT_INFO_DRAFT: StorePaymentInfoDraft = {
+  storePayoutMethod: "BANK_ACCOUNT",
+  storePayoutBankName: "",
+  storePayoutAccountType: "AHORROS",
+  storePayoutAccountNumber: "",
+  storePayoutAccountHolder: "",
+  storePayoutAccountDocument: "",
+  storePayoutNequiPhone: "",
+  storePayoutDaviplataPhone: "",
+  storePayoutBillingEmail: "",
+  storePayoutTaxResponsibility: "",
+  storePayoutTaxNotes: "",
+};
+
+function buildPaymentInfoDraft(me: StoreMe | null): StorePaymentInfoDraft {
+  return {
+    storePayoutMethod:
+      String(me?.storePayoutMethod ?? "BANK_ACCOUNT").toUpperCase() === "NEQUI"
+        ? "NEQUI"
+        : String(me?.storePayoutMethod ?? "").toUpperCase() === "DAVIPLATA"
+          ? "DAVIPLATA"
+          : "BANK_ACCOUNT",
+    storePayoutBankName: String(me?.storePayoutBankName ?? ""),
+    storePayoutAccountType:
+      String(me?.storePayoutAccountType ?? "AHORROS").toUpperCase() === "CORRIENTE"
+        ? "CORRIENTE"
+        : String(me?.storePayoutAccountType ?? "").toUpperCase() === "BILLETERA"
+          ? "BILLETERA"
+          : "AHORROS",
+    storePayoutAccountNumber: String(me?.storePayoutAccountNumber ?? ""),
+    storePayoutAccountHolder: String(me?.storePayoutAccountHolder ?? ""),
+    storePayoutAccountDocument: String(me?.storePayoutAccountDocument ?? ""),
+    storePayoutNequiPhone: String(me?.storePayoutNequiPhone ?? ""),
+    storePayoutDaviplataPhone: String(me?.storePayoutDaviplataPhone ?? ""),
+    storePayoutBillingEmail: String(me?.storePayoutBillingEmail ?? ""),
+    storePayoutTaxResponsibility: String(me?.storePayoutTaxResponsibility ?? ""),
+    storePayoutTaxNotes: String(me?.storePayoutTaxNotes ?? ""),
+  };
+}
 
 function mapStoreStateFromMe(me: StoreMe | null): StoreStateUI {
   if (!me) return "ACTIVE";
@@ -42,6 +84,9 @@ export function useStoreSettings({
   const [savingStoreState, setSavingStoreState] = useState(false);
 
   const [printPrefs, setPrintPrefs] = useState<PrintPrefs>({ ...DEFAULT_PRINT_PREFS });
+  const [paymentInfoDraft, setPaymentInfoDraft] = useState<StorePaymentInfoDraft>({ ...DEFAULT_PAYMENT_INFO_DRAFT });
+  const [savingPaymentInfo, setSavingPaymentInfo] = useState(false);
+  const [paymentInfoMsg, setPaymentInfoMsg] = useState<string | null>(null);
 
   useEffect(() => {
     const pp = loadPrintPrefs();
@@ -55,6 +100,7 @@ export function useStoreSettings({
       setAutoMode(me.autoDecisionMode ?? "AUTO_REJECT");
       setAutoMinutes(Number(me.autoDecisionMinutes ?? 5));
       setStoreStateUI(mapStoreStateFromMe(me));
+      setPaymentInfoDraft(buildPaymentInfoDraft(me));
     } catch (e: any) {
       const msg = String(e?.message ?? "");
       if (isUnauthorizedErrMessage(msg)) {
@@ -123,6 +169,35 @@ export function useStoreSettings({
       throw e;
     } finally {
       setSavingStoreState(false);
+    }
+  }
+
+
+  async function savePaymentInfo() {
+    if (savingPaymentInfo) return;
+
+    setSavingPaymentInfo(true);
+    setPaymentInfoMsg(null);
+
+    try {
+      const updated = await storeFetch<StoreMe>(`/stores/me/payment-info`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(paymentInfoDraft),
+      });
+
+      setStoreMe(updated);
+      setPaymentInfoDraft(buildPaymentInfoDraft(updated));
+      setPaymentInfoMsg("Información enviada para validación de KroniX. Queda pendiente de aprobación CTCC.");
+    } catch (e: any) {
+      const msg = String(e?.message ?? "");
+      if (isUnauthorizedErrMessage(msg)) {
+        await doLogout();
+        return;
+      }
+      setPaymentInfoMsg(msg || "No se pudo guardar la información de pago.");
+    } finally {
+      setSavingPaymentInfo(false);
     }
   }
 
@@ -198,6 +273,10 @@ export function useStoreSettings({
     savingStoreState,
     printPrefs,
     setPrintPrefs,
+    paymentInfoDraft,
+    setPaymentInfoDraft,
+    savingPaymentInfo,
+    paymentInfoMsg,
 
     storeName,
     userName,
@@ -211,6 +290,7 @@ export function useStoreSettings({
     loadStoreMe,
     saveAutoDecision,
     saveStoreOperationalState,
+    savePaymentInfo,
     updatePrintPrefs,
   };
 }

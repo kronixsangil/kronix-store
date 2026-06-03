@@ -1,4 +1,5 @@
 // app/store/lib/storeTypes.ts
+// app/store/lib/storeTypes.ts
 export type ApiOrderStatus = "AVAILABLE" | "ASSIGNED" | "EN_ROUTE" | "DELIVERED" | "CANCELLED";
 
 export type ApiOrderFlowStatus =
@@ -74,6 +75,24 @@ export type ApiOrder = {
 
 export type StoreAutoDecisionMode = "AUTO_REJECT" | "AUTO_CONFIRM";
 
+
+export type StorePayoutMethod = "BANK_ACCOUNT" | "NEQUI" | "DAVIPLATA";
+export type StorePayoutInfoStatus = "NONE" | "PENDING" | "APPROVED" | "REJECTED";
+
+export type StorePaymentInfoDraft = {
+  storePayoutMethod: StorePayoutMethod;
+  storePayoutBankName: string;
+  storePayoutAccountType: "AHORROS" | "CORRIENTE" | "BILLETERA" | "";
+  storePayoutAccountNumber: string;
+  storePayoutAccountHolder: string;
+  storePayoutAccountDocument: string;
+  storePayoutNequiPhone: string;
+  storePayoutDaviplataPhone: string;
+  storePayoutBillingEmail: string;
+  storePayoutTaxResponsibility: string;
+  storePayoutTaxNotes: string;
+};
+
 export type StoreAffiliateStatus =
   | "PENDING_VISIT"
   | "VISITED"
@@ -136,6 +155,24 @@ export type StoreMe = {
   approvalNotes?: string | null;
   onboardingNotes?: string | null;
   rejectedReason?: string | null;
+
+  storePayoutMethod?: StorePayoutMethod | string | null;
+  storePayoutBankName?: string | null;
+  storePayoutAccountType?: "AHORROS" | "CORRIENTE" | "BILLETERA" | string | null;
+  storePayoutAccountNumber?: string | null;
+  storePayoutAccountHolder?: string | null;
+  storePayoutAccountDocument?: string | null;
+  storePayoutNequiPhone?: string | null;
+  storePayoutDaviplataPhone?: string | null;
+  storePayoutBillingEmail?: string | null;
+  storePayoutTaxResponsibility?: string | null;
+  storePayoutTaxNotes?: string | null;
+  storePayoutInfoStatus?: StorePayoutInfoStatus | string | null;
+  storePayoutInfoSubmittedAt?: string | null;
+  storePayoutInfoReviewedAt?: string | null;
+  storePayoutInfoReviewedBy?: string | null;
+  storePayoutInfoReviewNotes?: string | null;
+  storePayoutInfoRejectedReason?: string | null;
 
   isActive: boolean;
   isPaused: boolean;
