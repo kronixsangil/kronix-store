@@ -1020,6 +1020,12 @@ export default function StoreDashboard() {
                   toggleNotify={alerts.toggleNotify}
                   soundVolume={alerts.soundVolume}
                   setSoundVolumeState={alerts.setSoundVolumeState}
+                  storeMe={settings.storeMe}
+paymentInfoDraft={settings.paymentInfoDraft}
+setPaymentInfoDraft={settings.setPaymentInfoDraft}
+savingPaymentInfo={settings.savingPaymentInfo}
+paymentInfoMsg={settings.paymentInfoMsg}
+savePaymentInfo={settings.savePaymentInfo}
                 />
               ) : null}
 
