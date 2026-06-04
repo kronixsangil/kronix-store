@@ -57,11 +57,10 @@ function getStoreActivationState(storeMe: any) {
     Boolean(storeMe?.onboardingCompleted && docsApproved && contractSigned);
 
   const finalActiveDone =
-    approved &&
-    docsApproved &&
-    contractSigned &&
-    storeMe?.isActive === true &&
-    storeMe?.isPaused !== true;
+  approved &&
+  docsApproved &&
+  contractSigned &&
+  storeMe?.isActive === true;
 
   const statusLabel =
     status === "APPROVED"

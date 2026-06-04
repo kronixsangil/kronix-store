@@ -146,8 +146,7 @@ function getActivationState(store: StoreMe | null, legalCompleted: boolean) {
     approvedDone &&
     docsApprovedDone &&
     contractDone &&
-    store?.isActive === true &&
-    store?.isPaused !== true;
+    store?.isActive === true;
 
   const checks = [
     commercialDone,
