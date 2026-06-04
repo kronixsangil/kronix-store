@@ -140,37 +140,42 @@ export function useStoreSettings({
   }
 
   async function saveStoreOperationalState(nextState: StoreStateUI) {
-    if (savingStoreState) return;
-    setSavingStoreState(true);
+  if (savingStoreState) return;
+  setSavingStoreState(true);
 
-    try {
-      const pausedReason =
-        nextState === "PAUSED"
-          ? "Pausada temporalmente desde la tablet de tienda"
-          : null;
+  try {
+    const pausedReason =
+      nextState === "PAUSED"
+        ? "Pausada temporalmente desde la tablet de tienda"
+        : null;
 
-      const updated = await storeFetch<StoreMe>(`/stores/me/state`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          state: nextState,
-          pausedReason,
-        }),
-      });
+    await storeFetch<StoreMe>(`/stores/me/state`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        state: nextState,
+        pausedReason,
+      }),
+    });
 
-      setStoreMe(updated);
-      setStoreStateUI(mapStoreStateFromMe(updated));
-    } catch (e: any) {
-      const msg = String(e?.message ?? "");
-      if (isUnauthorizedErrMessage(msg)) {
-        await doLogout();
-        return;
-      }
-      throw e;
-    } finally {
-      setSavingStoreState(false);
+    const freshMe = await storeFetch<StoreMe>(`/stores/me`, { method: "GET" });
+
+    setStoreMe(freshMe);
+    setAutoMode(freshMe.autoDecisionMode ?? "AUTO_REJECT");
+    setAutoMinutes(Number(freshMe.autoDecisionMinutes ?? 5));
+    setStoreStateUI(mapStoreStateFromMe(freshMe));
+    setPaymentInfoDraft(buildPaymentInfoDraft(freshMe));
+  } catch (e: any) {
+    const msg = String(e?.message ?? "");
+    if (isUnauthorizedErrMessage(msg)) {
+      await doLogout();
+      return;
     }
+    throw e;
+  } finally {
+    setSavingStoreState(false);
   }
+}
 
 
   async function savePaymentInfo() {
