@@ -552,7 +552,7 @@ export default function RegisterTab({
 
   return (
     <>
-      <div className="ct-tab-frame flex h-full min-h-0 flex-col gap-3 overflow-hidden">
+      <div className="ct-tab-frame flex h-full min-h-0 flex-col gap-3 overflow-y-auto md:overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="overflow-hidden rounded-[24px] border border-white/60 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_34%),linear-gradient(135deg,rgba(15,23,42,0.98)_0%,rgba(30,41,59,0.96)_52%,rgba(15,23,42,0.98)_100%)] p-4 shadow-[0_14px_34px_rgba(15,23,42,0.16)]">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-4">
@@ -634,7 +634,7 @@ export default function RegisterTab({
           </div>
         ) : null}
 
-        <div className="min-h-0 flex-1 overflow-y-auto rounded-[24px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.84)_0%,rgba(248,250,252,0.96)_100%)] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="min-h-0 md:flex-1 overflow-visible md:overflow-y-auto rounded-[24px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.84)_0%,rgba(248,250,252,0.96)_100%)] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
             <div className="xl:col-span-2">
               <SectionCard
