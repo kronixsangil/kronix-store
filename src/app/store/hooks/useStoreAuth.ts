@@ -114,7 +114,7 @@ const [inputStoreCode, setInputStoreCode] = useState<string>("");
       if (!res.ok) throw new Error(`Error ${res.status}`);
 
       const data = (await res.json()) as any;
-      const user = data?.user ?? null;
+      const user = data?.user ?? data ?? null;
       const role = String(user?.role ?? "").toUpperCase();
       const storeId = String(user?.storeId ?? "").trim();
       const storeCodeFromUser = String(user?.storeCode ?? "").trim();
