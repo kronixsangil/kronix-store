@@ -224,7 +224,10 @@ export default function ProfileTab({
                 </div>
 
                 <div className="mt-3 max-w-3xl text-[13px] font-medium leading-snug text-slate-300">
-                  Aquí quedan los datos de sesión, estado operativo y documentos legales. El registro del comercio vive ahora en la pestaña Registro.
+                  Aquí quedan los datos de sesión, estado operativo y documentos legales. 
+                </div>
+                <div className="mt-3 max-w-3xl text-[13px] font-medium leading-snug text-slate-300">
+                  El registro del comercio vive ahora en la pestaña Registro.
                 </div>
               </div>
             </div>

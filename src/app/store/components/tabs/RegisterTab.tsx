@@ -591,6 +591,10 @@ export default function RegisterTab({
 
                 <div className="mt-3 max-w-3xl text-[13px] font-medium leading-snug text-slate-300">
                   Completa los datos comerciales, contacto, horarios y branding. La visita,
+                  
+                </div>
+                <div className="mt-3 max-w-3xl text-[13px] font-medium leading-snug text-slate-300">
+                 
                   documentos, contrato y activación final son validados por KroniX desde CTCC.
                 </div>
               </div>
