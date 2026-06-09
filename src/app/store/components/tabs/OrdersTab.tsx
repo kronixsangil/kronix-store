@@ -313,50 +313,48 @@ function KronixEnviosSidebarBtn({
       type="button"
       onClick={onClick}
       className={[
-        "group relative w-full overflow-hidden rounded-[16px] p-3 text-left ring-1 transition active:scale-[0.99]",
+        "group relative min-h-[74px] w-full overflow-hidden rounded-[16px] px-3 py-3 text-left text-white ring-1 transition active:scale-[0.99]",
         active
-          ? "bg-[linear-gradient(135deg,#111827_0%,#334155_35%,#7c8796_68%,#e5e7eb_100%)] text-white ring-slate-300 shadow-[0_12px_24px_rgba(15,23,42,0.22)]"
-          : "bg-[linear-gradient(135deg,#1f2937_0%,#64748b_55%,#f8fafc_100%)] text-white ring-slate-300 hover:-translate-y-[1px] hover:shadow-[0_10px_20px_rgba(15,23,42,0.12)]",
+          ? "bg-[radial-gradient(circle_at_78%_50%,rgba(220,252,231,1)_0%,rgba(110,231,183,1)_15%,rgba(16,185,129,1)_35%,rgba(5,150,105,1)_60%,rgba(6,95,70,1)_100%)] ring-emerald-300 shadow-[0_12px_24px_rgba(16,185,129,0.22)]"
+          : "bg-[radial-gradient(circle_at_78%_50%,rgba(220,252,231,1)_0%,rgba(110,231,183,1)_15%,rgba(16,185,129,1)_35%,rgba(5,150,105,1)_60%,rgba(6,95,70,1)_100%)] ring-emerald-300 hover:-translate-y-[1px] hover:shadow-[0_10px_20px_rgba(16,185,129,0.16)]",
       ].join(" ")}
     >
       <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-white/25 blur-2xl" />
       <div className="pointer-events-none absolute bottom-0 right-0 h-10 w-24 rotate-[-18deg] bg-white/30 blur-md" />
-      <div className="relative flex items-center gap-2.5">
-        <div className="relative h-[42px] w-[42px] shrink-0">
-          <Image
-            src="/branding/kronix/Enviar-Paquete1.png"
-            alt="KroniX Envíos"
-            fill
-            className="object-contain scale-[1.4] drop-shadow-sm"
-            sizes="42px"
-          />
-        </div>
 
-        <div className="min-w-0 flex-1">
-          <div
-            className={[
-              "text-[13px] font-black leading-tight",
-              active ? "text-white" : "text-white",
-            ].join(" ")}
-          >
+      {/* Imagen izquierda: caja. Ajusta scale / translate aquí si quieres probar tamaño y posición. */}
+      <div className="pointer-events-none absolute left-2 top-1/2 h-[50px] w-[50px] -translate-y-1/2">
+        <Image
+          src="/branding/kronix/Enviar-Paquete3.png"
+          alt="Paquete KroniX Envíos"
+          fill
+          className="object-contain scale-[1.1] translate-x-[-2px] translate-y-[0px] drop-shadow-[0_8px_12px_rgba(0,0,0,0.18)]"
+          sizes="50px"
+        />
+      </div>
+
+      {/* Imagen derecha: motorizado. Ajusta scale / translate aquí si quieres probar tamaño y posición. */}
+      <div className="pointer-events-none absolute right-[-4px] top-1/2 h-[66px] w-[74px] -translate-y-1/2">
+        <Image
+          src="/branding/kronix/Enviar-Paquete1.png"
+          alt="Motorizado KroniX Envíos"
+          fill
+          className="object-contain scale-[1.1] translate-x-[-18px] translate-y-[3px] drop-shadow-[0_10px_16px_rgba(0,0,0,0.22)]"
+          sizes="74px"
+        />
+      </div>
+
+      <div className="relative z-10 flex min-h-[50px] items-center">
+        <div className="min-w-0 flex-1 pl-[50px] pr-[72px]">
+          <div className="text-[13px] font-black leading-tight text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.22)]">
             KroniX Envíos
           </div>
-          <div
-            className={[
-              "mt-0.5 text-[10px] font-bold leading-3",
-              active ? "text-white/85" : "text-white/90",
-            ].join(" ")}
-          >
+          <div className="mt-0.5 text-[10px] font-bold leading-3 text-white/92 drop-shadow-[0_1px_1px_rgba(0,0,0,0.16)]">
             Solicitar motorizado
           </div>
         </div>
 
-        <div
-          className={[
-            "text-[24px] font-black leading-none transition group-hover:translate-x-0.5",
-            active ? "text-white/85" : "text-white",
-          ].join(" ")}
-        >
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[24px] font-black leading-none text-white/90 transition group-hover:translate-x-0.5">
           ›
         </div>
       </div>
@@ -778,7 +776,7 @@ function KronixEnviosPanel({
     <div className="h-full min-h-0 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_14px_30px_rgba(15,23,42,0.08)]">
         <div className="relative overflow-hidden px-5 py-5 text-white">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.58),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(148,163,184,0.34),transparent_34%),linear-gradient(135deg,#111827_0%,#334155_34%,#7c8796_68%,#e5e7eb_100%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.58),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(148,163,184,0.34),transparent_34%),linear-gradient(135deg,#047857_0%,#10b981_35%,#34d399_70%,#6ee7b7_100%)]" />
           <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-white/25 blur-2xl" />
           <div className="pointer-events-none absolute bottom-0 right-0 h-16 w-64 rotate-[-12deg] bg-white/30 blur-md" />
           <div className="relative z-10 flex items-start gap-4">
@@ -908,7 +906,7 @@ function KronixEnviosPanel({
               disabled={creating || loadingData || !canCreate}
               className={[
                 "h-11 flex-1 rounded-[18px] text-[13px] font-black text-white transition disabled:cursor-not-allowed disabled:opacity-55",
-                "bg-[linear-gradient(90deg,#1f2937_0%,#64748b_52%,#cbd5e1_100%)] shadow-[0_12px_22px_rgba(15,23,42,0.22)] hover:scale-[0.995]",
+                "bg-[linear-gradient(90deg,#047857_0%,#10b981_50%,#6ee7b7_100%)] shadow-[0_12px_22px_rgba(15,23,42,0.22)] hover:scale-[0.995]",
               ].join(" ")}
             >
               {creating ? "Solicitando..." : "Confirmar servicio"}
@@ -1203,4 +1201,6 @@ export default function OrdersTab({
     </div>
   );
 }
+
+
 

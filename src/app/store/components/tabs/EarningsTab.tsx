@@ -93,6 +93,21 @@ type Props = {
   };
 };
 
+type CourierViewScope = "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "YEARLY";
+
+type CourierGroupedPeriod = {
+  key: string;
+  label: string;
+  rangeLabel: string;
+  services: number;
+  totalCOP: number;
+  deliveredServices: number;
+  activeServices: number;
+  cancelledServices: number;
+  rows: StoreCourierRow[];
+  sortTime: number;
+};
+
 function readErrorMessage(e: any) {
   const raw = String(e?.message ?? e ?? "").trim();
 
@@ -122,6 +137,25 @@ function formatDateTime(value?: string | Date | null) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(d);
+}
+
+function formatDateOnly(value?: string | Date | null) {
+  if (!value) return "Sin fecha";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "Sin fecha";
+
+  return new Intl.DateTimeFormat("es-CO", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  }).format(d);
+}
+
+function formatMonthYear(date: Date) {
+  return new Intl.DateTimeFormat("es-CO", {
+    month: "long",
+    year: "numeric",
+  }).format(date);
 }
 
 function statusLabel(status?: string | null, flowStatus?: string | null) {
@@ -156,6 +190,91 @@ function statusTone(status?: string | null, flowStatus?: string | null) {
   return "border-slate-200 bg-slate-50 text-slate-700";
 }
 
+function isDeliveredService(row: StoreCourierRow) {
+  const s = String(row.status ?? "").toUpperCase();
+  const f = String(row.flowStatus ?? "").toUpperCase();
+  return s === "DELIVERED" || f === "DELIVERED";
+}
+
+function isCancelledService(row: StoreCourierRow) {
+  const s = String(row.status ?? "").toUpperCase();
+  const f = String(row.flowStatus ?? "").toUpperCase();
+  return s === "CANCELLED" || f === "CANCELLED";
+}
+
+function getMonday(date: Date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
+function addDays(date: Date, days: number) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function getCourierPeriodInfo(date: Date, scope: CourierViewScope) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const year = d.getFullYear();
+  const month = d.getMonth();
+
+  if (scope === "WEEKLY") {
+    const start = getMonday(d);
+    const end = addDays(start, 6);
+    const key = `WEEKLY-${start.toISOString().slice(0, 10)}`;
+
+    return {
+      key,
+      label: `Semana ${formatDateOnly(start)} - ${formatDateOnly(end)}`,
+      rangeLabel: `${formatDateOnly(start)} → ${formatDateOnly(end)}`,
+      sortTime: start.getTime(),
+    };
+  }
+
+  if (scope === "BIWEEKLY") {
+    const firstHalf = d.getDate() <= 15;
+    const start = new Date(year, month, firstHalf ? 1 : 16);
+    const end = new Date(year, month + 1, 0);
+    if (firstHalf) end.setDate(15);
+
+    const key = `BIWEEKLY-${year}-${String(month + 1).padStart(2, "0")}-${firstHalf ? "01" : "16"}`;
+
+    return {
+      key,
+      label: `${firstHalf ? "Primera quincena" : "Segunda quincena"} · ${formatMonthYear(d)}`,
+      rangeLabel: `${formatDateOnly(start)} → ${formatDateOnly(end)}`,
+      sortTime: start.getTime(),
+    };
+  }
+
+  if (scope === "MONTHLY") {
+    const start = new Date(year, month, 1);
+    const end = new Date(year, month + 1, 0);
+    const key = `MONTHLY-${year}-${String(month + 1).padStart(2, "0")}`;
+
+    return {
+      key,
+      label: formatMonthYear(d),
+      rangeLabel: `${formatDateOnly(start)} → ${formatDateOnly(end)}`,
+      sortTime: start.getTime(),
+    };
+  }
+
+  const start = new Date(year, 0, 1);
+  const end = new Date(year, 11, 31);
+  return {
+    key: `YEARLY-${year}`,
+    label: String(year),
+    rangeLabel: `${formatDateOnly(start)} → ${formatDateOnly(end)}`,
+    sortTime: start.getTime(),
+  };
+}
+
 function ScopeBtn({
   active,
   children,
@@ -173,6 +292,31 @@ function ScopeBtn({
         "inline-flex h-9 items-center justify-center rounded-full px-4 text-[12px] font-extrabold transition",
         active
           ? "bg-slate-900 text-white shadow-[0_10px_24px_rgba(15,23,42,0.14)]"
+          : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50",
+      ].join(" ")}
+    >
+      {children}
+    </button>
+  );
+}
+
+function CourierScopeBtn({
+  active,
+  children,
+  onClick,
+}: {
+  active: boolean;
+  children: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        "inline-flex h-8 items-center justify-center rounded-full px-3 text-[11px] font-extrabold transition",
+        active
+          ? "bg-[linear-gradient(135deg,#111827_0%,#334155_56%,#94a3b8_100%)] text-white shadow-[0_10px_20px_rgba(15,23,42,0.16)]"
           : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50",
       ].join(" ")}
     >
@@ -289,93 +433,115 @@ function PeriodRow({
   );
 }
 
-function StoreCourierPeriodRowCard({
-  row,
-  maxCOP,
-}: {
-  row: StoreCourierPeriodRow;
-  maxCOP: number;
-}) {
-  const ratio = maxCOP > 0 ? Math.max(10, Math.min(100, (row.totalCOP / maxCOP) * 100)) : 10;
-
-  return (
-    <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 shadow-[0_4px_14px_rgba(15,23,42,0.03)]">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="text-[15px] font-black text-slate-900">{row.key}</div>
-          <div className="mt-1 text-[12px] font-semibold text-slate-500">
-            {row.services} servicios • {row.deliveredServices} entregados • {row.activeServices} activos
-          </div>
-        </div>
-        <div className="text-right text-[18px] font-black text-slate-900">
-          {formatCOP(Math.round(row.totalCOP || 0))}
-        </div>
-      </div>
-
-      <div className="mt-3 h-2.5 rounded-full bg-slate-100">
-        <div
-          className="h-2.5 rounded-full bg-slate-700 transition-all"
-          style={{ width: `${ratio}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function StoreCourierServiceRowCard({ row }: { row: StoreCourierRow }) {
+function CourierServiceCompactRow({ row }: { row: StoreCourierRow }) {
   const driverName = String(row.driver?.name ?? "").trim();
   const vehiclePlate = String(row.driver?.vehicle?.plate ?? "").trim();
   const totalCOP = Math.round(Number(row.totalCOP ?? 0));
 
   return (
-    <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 shadow-[0_4px_14px_rgba(15,23,42,0.03)]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+    <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto] items-center gap-3 border-t border-slate-100 px-3 py-2.5 first:border-t-0">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="truncate text-[13px] font-black text-slate-900">
+            {row.shortId || formatShortOrderId(row.id)}
+          </span>
+          <span
+            className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.08em] ${statusTone(
+              row.status,
+              row.flowStatus
+            )}`}
+          >
+            {statusLabel(row.status, row.flowStatus)}
+          </span>
+        </div>
+        <div className="mt-1 text-[11px] font-semibold text-slate-500">
+          {formatDateTime(row.createdAt)}
+        </div>
+      </div>
+
+      <div className="min-w-0 text-[11px] font-medium leading-snug text-slate-600">
+        <div className="truncate">
+          <b>Recogida:</b> {row.pickupPlaceName || row.pickupAddress || "Tienda"}
+        </div>
+        <div className="truncate">
+          <b>Driver:</b> {driverName || "Sin asignar"}{vehiclePlate ? ` · ${vehiclePlate}` : ""}
+        </div>
+      </div>
+
+      <div className="shrink-0 text-right">
+        <div className="text-[14px] font-black text-slate-900">{formatCOP(totalCOP)}</div>
+        <div className="mt-0.5 text-[9px] font-black uppercase tracking-[0.10em] text-slate-400">
+          A conciliar
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CourierPeriodAccordionCard({
+  period,
+  maxCOP,
+  open,
+  onToggle,
+}: {
+  period: CourierGroupedPeriod;
+  maxCOP: number;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const ratio = maxCOP > 0 ? Math.max(10, Math.min(100, (period.totalCOP / maxCOP) * 100)) : 10;
+
+  return (
+    <div className="overflow-hidden rounded-[16px] border border-slate-200 bg-white shadow-[0_4px_14px_rgba(15,23,42,0.03)]">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-slate-50"
+      >
+        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-900 text-[18px] font-black leading-none text-white shadow-sm">
+          {open ? "−" : "+"}
+        </div>
+
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[15px] font-black text-slate-900">
-              {row.shortId || formatShortOrderId(row.id)}
-            </span>
-            <span
-              className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.10em] ${statusTone(
-                row.status,
-                row.flowStatus
-              )}`}
-            >
-              {statusLabel(row.status, row.flowStatus)}
+            <div className="truncate text-[15px] font-black text-slate-900">{period.label}</div>
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-extrabold text-slate-600">
+              {period.services} {period.services === 1 ? "servicio" : "servicios"}
             </span>
           </div>
 
-          <div className="mt-1 text-[12px] font-semibold text-slate-500">
-            {formatDateTime(row.createdAt)}
+          <div className="mt-1 text-[11px] font-semibold text-slate-500">
+            {period.rangeLabel} · {period.deliveredServices} entregados · {period.activeServices} activos
+            {period.cancelledServices ? ` · ${period.cancelledServices} cancelados` : ""}
           </div>
 
-          <div className="mt-2 line-clamp-2 text-[12px] font-medium leading-snug text-slate-600">
-            <b>Recogida:</b> {row.pickupPlaceName || row.pickupAddress || "Tienda"}
-          </div>
-
-          <div className="mt-1 line-clamp-2 text-[12px] font-medium leading-snug text-slate-600">
-            <b>Destino:</b> {row.dropoffPlaceName || row.dropoffAddress || "Por confirmar"}
-          </div>
-
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-bold text-slate-500">
-            <span className="rounded-full bg-slate-100 px-2.5 py-1">
-              {driverName ? `Driver: ${driverName}` : "Sin driver asignado"}
-            </span>
-            {vehiclePlate ? (
-              <span className="rounded-full bg-slate-100 px-2.5 py-1">Placa: {vehiclePlate}</span>
-            ) : null}
+          <div className="mt-2 h-2 rounded-full bg-slate-100">
+            <div
+              className="h-2 rounded-full bg-[linear-gradient(90deg,#111827_0%,#64748b_100%)] transition-all"
+              style={{ width: `${ratio}%` }}
+            />
           </div>
         </div>
 
         <div className="shrink-0 text-right">
           <div className="text-[18px] font-black leading-none text-slate-900">
-            {formatCOP(totalCOP)}
+            {formatCOP(Math.round(period.totalCOP || 0))}
           </div>
-          <div className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+          <div className="mt-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
             A conciliar
           </div>
         </div>
-      </div>
+      </button>
+
+      {open ? (
+        <div className="border-t border-slate-100 bg-slate-50/60 px-2 pb-2">
+          <div className="overflow-hidden rounded-[14px] border border-slate-200 bg-white">
+            {period.rows.map((row) => (
+              <CourierServiceCompactRow key={row.id} row={row} />
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -389,6 +555,8 @@ export default function EarningsTab({
   const [courierData, setCourierData] = useState<StoreCourierResponse | null>(null);
   const [courierLoading, setCourierLoading] = useState(false);
   const [courierError, setCourierError] = useState<string | null>(null);
+  const [courierViewScope, setCourierViewScope] = useState<CourierViewScope>("MONTHLY");
+  const [openCourierPeriodKey, setOpenCourierPeriodKey] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -398,7 +566,7 @@ export default function EarningsTab({
       setCourierError(null);
 
       try {
-        const res = await fetch(`/api/store/orders/store/kronix-envios?scope=${earningsScope}`, {
+        const res = await fetch(`/api/store/orders/store/kronix-envios?scope=YEARLY`, {
           method: "GET",
           credentials: "include",
           cache: "no-store",
@@ -429,15 +597,66 @@ export default function EarningsTab({
     return () => {
       cancelled = true;
     };
-  }, [earningsScope]);
+  }, []);
+
+  useEffect(() => {
+    setOpenCourierPeriodKey(null);
+  }, [courierViewScope]);
 
   const courierSummary = courierData?.summary ?? {};
   const courierRows = courierData?.rows ?? [];
-  const courierPeriods = courierData?.byPeriod ?? [];
+
+  const groupedCourierPeriods = useMemo(() => {
+    const map = new Map<string, CourierGroupedPeriod>();
+
+    courierRows.forEach((row) => {
+      const date = new Date(row.createdAt);
+      if (Number.isNaN(date.getTime())) return;
+
+      const info = getCourierPeriodInfo(date, courierViewScope);
+      const existing = map.get(info.key);
+      const amount = Math.round(Number(row.totalCOP ?? 0));
+      const delivered = isDeliveredService(row) ? 1 : 0;
+      const cancelled = isCancelledService(row) ? 1 : 0;
+      const active = !delivered && !cancelled ? 1 : 0;
+
+      if (!existing) {
+        map.set(info.key, {
+          key: info.key,
+          label: info.label,
+          rangeLabel: info.rangeLabel,
+          services: 1,
+          totalCOP: amount,
+          deliveredServices: delivered,
+          activeServices: active,
+          cancelledServices: cancelled,
+          rows: [row],
+          sortTime: info.sortTime,
+        });
+        return;
+      }
+
+      existing.services += 1;
+      existing.totalCOP += amount;
+      existing.deliveredServices += delivered;
+      existing.activeServices += active;
+      existing.cancelledServices += cancelled;
+      existing.rows.push(row);
+    });
+
+    return Array.from(map.values())
+      .map((period) => ({
+        ...period,
+        rows: period.rows.sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        ),
+      }))
+      .sort((a, b) => b.sortTime - a.sortTime);
+  }, [courierRows, courierViewScope]);
 
   const maxCourierPeriodCOP = useMemo(
-    () => Math.max(0, ...courierPeriods.map((row) => Math.round(Number(row.totalCOP ?? 0)))),
-    [courierPeriods]
+    () => Math.max(0, ...groupedCourierPeriods.map((row) => Math.round(Number(row.totalCOP ?? 0)))),
+    [groupedCourierPeriods]
   );
 
   return (
@@ -658,59 +877,81 @@ export default function EarningsTab({
               </div>
 
               <div className="ct-card p-4">
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="text-[18px] font-black text-slate-900">Record KroniX Envíos</div>
                     <div className="mt-1 text-[12px] font-medium text-slate-500">
-                      Servicios creados desde esta tienda con estado y valor registrado.
+                      Resumen agrupado para evitar filas largas. Abre cada período con + para ver el desglose.
                     </div>
                   </div>
 
-                  <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-extrabold text-slate-700">
-                    {courierLoading ? "Cargando..." : `${courierRows.length} servicios`}
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <CourierScopeBtn
+                      active={courierViewScope === "WEEKLY"}
+                      onClick={() => setCourierViewScope("WEEKLY")}
+                    >
+                      Semanal
+                    </CourierScopeBtn>
+                    <CourierScopeBtn
+                      active={courierViewScope === "BIWEEKLY"}
+                      onClick={() => setCourierViewScope("BIWEEKLY")}
+                    >
+                      Quincenal
+                    </CourierScopeBtn>
+                    <CourierScopeBtn
+                      active={courierViewScope === "MONTHLY"}
+                      onClick={() => setCourierViewScope("MONTHLY")}
+                    >
+                      Mensual
+                    </CourierScopeBtn>
+                    <CourierScopeBtn
+                      active={courierViewScope === "YEARLY"}
+                      onClick={() => setCourierViewScope("YEARLY")}
+                    >
+                      Anual
+                    </CourierScopeBtn>
                   </div>
                 </div>
 
-                <div className="mt-3 grid grid-cols-[260px_minmax(0,1fr)] gap-2">
-                  <div className="space-y-2">
-                    {courierPeriods.length ? (
-                      courierPeriods.map((row) => (
-                        <StoreCourierPeriodRowCard
-                          key={row.key}
-                          row={row}
-                          maxCOP={maxCourierPeriodCOP}
-                        />
-                      ))
-                    ) : (
-                      <div className="grid min-h-[180px] place-items-center rounded-[16px] border border-dashed border-slate-200 bg-slate-50 p-4 text-center">
-                        <div>
-                          <div className="text-[15px] font-black text-slate-800">
-                            Sin servicios en el rango
-                          </div>
-                          <div className="mt-2 text-[12px] font-medium text-slate-500">
-                            Cuando solicites KroniX Envíos desde Store App, aparecerán aquí.
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-extrabold text-slate-700">
+                    {courierLoading ? "Cargando..." : `${groupedCourierPeriods.length} períodos`}
                   </div>
+                  <div className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-extrabold text-slate-700">
+                    {courierLoading ? "..." : `${courierRows.length} servicios`}
+                  </div>
+                  <div className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-extrabold text-slate-700">
+                    Total {courierLoading ? "..." : formatCOP(Math.round(courierSummary.pendingReconciliationCOP ?? 0))}
+                  </div>
+                </div>
 
-                  <div className="max-h-[520px] space-y-2 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    {courierRows.length ? (
-                      courierRows.map((row) => <StoreCourierServiceRowCard key={row.id} row={row} />)
-                    ) : (
-                      <div className="grid min-h-[260px] place-items-center rounded-[16px] border border-dashed border-slate-200 bg-slate-50 p-4 text-center">
-                        <div>
-                          <div className="text-[16px] font-black text-slate-800">
-                            No hay KroniX Envíos registrados
-                          </div>
-                          <div className="mt-2 text-[13px] font-medium text-slate-500">
-                            Los servicios solicitados desde el botón KroniX Envíos quedarán guardados aquí para conciliación.
-                          </div>
+                <div className="mt-3 space-y-2">
+                  {groupedCourierPeriods.length ? (
+                    groupedCourierPeriods.map((period) => (
+                      <CourierPeriodAccordionCard
+                        key={period.key}
+                        period={period}
+                        maxCOP={maxCourierPeriodCOP}
+                        open={openCourierPeriodKey === period.key}
+                        onToggle={() =>
+                          setOpenCourierPeriodKey((current) =>
+                            current === period.key ? null : period.key
+                          )
+                        }
+                      />
+                    ))
+                  ) : (
+                    <div className="grid min-h-[220px] place-items-center rounded-[16px] border border-dashed border-slate-200 bg-slate-50 p-4 text-center">
+                      <div>
+                        <div className="text-[16px] font-black text-slate-800">
+                          No hay KroniX Envíos registrados
+                        </div>
+                        <div className="mt-2 text-[13px] font-medium text-slate-500">
+                          Los servicios solicitados desde el botón KroniX Envíos quedarán agrupados aquí para conciliación.
                         </div>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
