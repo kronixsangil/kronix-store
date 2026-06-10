@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 
 import { TabKey } from "./lib/storeTypes";
 import { loadTab, saveTab } from "./lib/storeUtils";
@@ -146,6 +147,243 @@ function clearDriverWaitingNotice(orderId?: string | null) {
   const next = { ...loadDriverWaitingMap() };
   delete next[clean];
   saveDriverWaitingMap(next);
+}
+
+
+function isValidKronixPassword(value: string) {
+  const clean = String(value ?? "").trim();
+  return clean.length >= 8 && /[a-zA-Z]/.test(clean) && /\d/.test(clean);
+}
+
+function StoreForcePasswordChangeScreen({
+  storeName,
+  storeCityLabel,
+  storeFetch,
+  onChanged,
+  onLogout,
+}: {
+  storeName: string;
+  storeCityLabel: string;
+  storeFetch: <T>(path: string, init?: RequestInit, retry?: boolean) => Promise<T>;
+  onChanged: () => void | Promise<void>;
+  onLogout: () => void | Promise<void>;
+}) {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const hasMin = newPassword.trim().length >= 8;
+  const hasLetter = /[a-zA-Z]/.test(newPassword);
+  const hasNumber = /\d/.test(newPassword);
+  const matches = confirmPassword.length > 0 && newPassword === confirmPassword;
+  const canSubmit =
+    !saving &&
+    currentPassword.trim().length > 0 &&
+    isValidKronixPassword(newPassword) &&
+    matches;
+
+  async function submit() {
+    setMsg(null);
+    setErr(null);
+
+    if (!isValidKronixPassword(newPassword)) {
+      setErr("La nueva contraseña debe tener mínimo 8 caracteres y combinar letras y números. No necesita símbolos.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setErr("La confirmación no coincide.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await storeFetch("/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: currentPassword.trim(),
+          newPassword: newPassword.trim(),
+        }),
+      });
+
+      setMsg("Contraseña actualizada correctamente.");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      await onChanged();
+    } catch (e: any) {
+      setErr(e?.message || "No se pudo actualizar la contraseña.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function Requirement({ ok, children }: { ok: boolean; children: ReactNode }) {
+    return (
+      <div className="flex items-center gap-2">
+        <span
+          className={[
+            "grid h-6 w-6 place-items-center rounded-full border text-[11px] font-black",
+            ok
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-slate-200 bg-white text-slate-500",
+          ].join(" ")}
+        >
+          {ok ? "✓" : "•"}
+        </span>
+        <span className={ok ? "text-emerald-800" : "text-slate-600"}>{children}</span>
+      </div>
+    );
+  }
+
+  return (
+    <StoreCityProvider
+      value={{
+        cityId: null,
+        citySlug: "",
+        cityName: "",
+        cityDepartment: "",
+        cityCountry: "",
+        cityLabel: storeCityLabel,
+        hasCity: Boolean(storeCityLabel),
+      }}
+    >
+      <main className="min-h-screen w-screen overflow-hidden ct-store-bg ct-tablet">
+        <div className="flex h-screen w-screen items-center justify-center px-3 py-3">
+          <div className="w-full max-w-[760px] overflow-hidden rounded-[26px] border border-white/70 bg-white/95 shadow-[0_24px_80px_rgba(15,23,42,0.16)] backdrop-blur">
+            <div className="bg-[linear-gradient(135deg,#0f172a_0%,#1e293b_54%,#475569_100%)] px-7 py-6 text-white">
+              <div className="inline-flex rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white/75">
+                Seguridad KroniX
+              </div>
+              <h1 className="mt-4 text-[28px] font-black leading-none">
+                Cambio de contraseña requerido
+              </h1>
+              <p className="mt-3 max-w-[620px] text-[14px] font-semibold leading-6 text-white/75">
+                Tu contraseña fue restablecida por KroniX. Debes cambiarla antes de continuar.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="rounded-full bg-emerald-500/15 px-3 py-1.5 text-xs font-bold text-emerald-200 ring-1 ring-emerald-400/20">
+                  {storeName || "Store App"}
+                </span>
+                {storeCityLabel ? (
+                  <span className="rounded-full bg-sky-500/15 px-3 py-1.5 text-xs font-bold text-sky-200 ring-1 ring-sky-400/20">
+                    {storeCityLabel}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="grid gap-4 p-5 md:grid-cols-[280px_minmax(0,1fr)]">
+              <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
+                <div className="text-[12px] font-black uppercase tracking-[0.14em] text-slate-500">
+                  Requisitos
+                </div>
+                <div className="mt-3 space-y-2 text-sm font-bold">
+                  <Requirement ok={hasMin}>Mínimo 8 caracteres</Requirement>
+                  <Requirement ok={hasLetter}>Al menos una letra</Requirement>
+                  <Requirement ok={hasNumber}>Al menos un número</Requirement>
+                  <Requirement ok={matches}>Confirmación coincide</Requirement>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[12px] font-bold leading-5 text-amber-900">
+                  Usa la contraseña temporal enviada por WhatsApp como contraseña actual.
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {err ? (
+                  <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+                    {err}
+                  </div>
+                ) : null}
+
+                {msg ? (
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">
+                    {msg}
+                  </div>
+                ) : null}
+
+                {[
+                  {
+                    label: "Contraseña temporal / actual",
+                    value: currentPassword,
+                    setValue: setCurrentPassword,
+                    show: showCurrent,
+                    setShow: setShowCurrent,
+                    autoComplete: "current-password",
+                  },
+                  {
+                    label: "Nueva contraseña",
+                    value: newPassword,
+                    setValue: setNewPassword,
+                    show: showNew,
+                    setShow: setShowNew,
+                    autoComplete: "new-password",
+                  },
+                  {
+                    label: "Confirmar nueva contraseña",
+                    value: confirmPassword,
+                    setValue: setConfirmPassword,
+                    show: showConfirm,
+                    setShow: setShowConfirm,
+                    autoComplete: "new-password",
+                  },
+                ].map((field) => (
+                  <div key={field.label} className="rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="text-[12px] font-black text-slate-800">{field.label}</div>
+                    <div className="mt-2 flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 focus-within:bg-white">
+                      <input
+                        type={field.show ? "text" : "password"}
+                        value={field.value}
+                        onChange={(e) => field.setValue(e.target.value)}
+                        placeholder={field.label.includes("Nueva") ? "Ej: Kronix123" : "••••••••"}
+                        autoComplete={field.autoComplete}
+                        className="w-full bg-transparent py-1 text-sm font-semibold text-slate-900 outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => field.setShow((v) => !v)}
+                        className="rounded-xl px-3 py-1.5 text-xs font-black text-slate-600 hover:bg-slate-100"
+                      >
+                        {field.show ? "Ocultar" : "Ver"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={onLogout}
+                    disabled={saving}
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    Cerrar sesión
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={submit}
+                    disabled={!canSubmit}
+                    className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
+                  >
+                    {saving ? "Actualizando…" : "Actualizar contraseña"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </StoreCityProvider>
+  );
 }
 
 function saveStoreNotice(input: {
@@ -735,6 +973,27 @@ export default function StoreDashboard() {
         requestPasswordReset={auth.requestPasswordReset}
         confirmPasswordReset={auth.confirmPasswordReset}
         backToLogin={auth.backToLogin}
+      />
+    );
+  }
+
+  if (
+    auth.authChecked &&
+    auth.accessToken?.trim() &&
+    !auth.checkingRole &&
+    auth.mustChangePassword
+  ) {
+    return (
+      <StoreForcePasswordChangeScreen
+        storeName={settings.storeName}
+        storeCityLabel={settings.storeCityLabel}
+        storeFetch={auth.storeFetch}
+        onLogout={handleLogout}
+        onChanged={async () => {
+          auth.setMustChangePassword(false);
+          await auth.verifyStoreRole();
+          await handleRefresh();
+        }}
       />
     );
   }

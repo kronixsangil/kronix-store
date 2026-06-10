@@ -250,7 +250,7 @@ export default function StoreAuthScreen({
                             </div>
 
                             <div className="mt-1 text-[13px] font-semibold text-slate-600">
-                              Te enviamos un código y creas una nueva contraseña
+                              Solicita recuperación y usa la contraseña temporal autorizada por KroniX
                             </div>
                           </div>
 
@@ -321,7 +321,7 @@ export default function StoreAuthScreen({
                                     }
                                     type="password"
                                     className="mt-2 h-[52px] w-full rounded-[18px] border border-slate-200 bg-slate-50 px-5 text-[16px] font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-200"
-                                    placeholder="••••••"
+                                    placeholder="Ej: Kronix123"
                                   />
                                 </div>
 
@@ -337,7 +337,7 @@ export default function StoreAuthScreen({
                                     }
                                     type="password"
                                     className="mt-2 h-[52px] w-full rounded-[18px] border border-slate-200 bg-slate-50 px-5 text-[16px] font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-200"
-                                    placeholder="••••••"
+                                    placeholder="Ej: Kronix123"
                                   />
                                 </div>
                               </div>
@@ -394,8 +394,7 @@ export default function StoreAuthScreen({
                           )}
 
                           <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4 text-[13px] leading-snug text-slate-600">
-                            Si no recibes el código, verifica tu número/email
-                            asociado o contacta soporte.
+                            Si no recibes respuesta, verifica tu número/email asociado o contacta soporte.
                           </div>
                         </div>
                       </>

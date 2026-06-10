@@ -59,6 +59,7 @@ export function useStoreAuth() {
   const [authChecked, setAuthChecked] = useState(false);
   const [checkingRole, setCheckingRole] = useState(false);
   const [accessDeniedMessage, setAccessDeniedMessage] = useState<string | null>(null);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
 
   const [loginStoreCode, setLoginStoreCode] = useState<string>("");
   const [loginPassword, setLoginPassword] = useState<string>("");
@@ -103,6 +104,7 @@ export function useStoreAuth() {
     clearStoreToken();
     setAccessToken("");
     setAccessDeniedMessage(null);
+    setMustChangePassword(false);
   }, []);
 
   async function logoutWithoutPause() {
@@ -139,6 +141,7 @@ export function useStoreAuth() {
       const role = String(user?.role ?? "").toUpperCase();
       const storeId = String(user?.storeId ?? "").trim();
       const storeCodeFromUser = String(user?.storeCode ?? "").trim();
+      setMustChangePassword(Boolean(user?.mustChangePassword));
 
       if (role !== "STORE" || !storeId) {
         await logoutWithoutPause();
@@ -476,6 +479,7 @@ export function useStoreAuth() {
     clearStoreToken();
     setAccessToken("");
     setAccessDeniedMessage(null);
+    setMustChangePassword(false);
   }
 
   function applyStoreCode() {
@@ -495,6 +499,8 @@ export function useStoreAuth() {
     authChecked,
     checkingRole,
     accessDeniedMessage,
+    mustChangePassword,
+    setMustChangePassword,
 
     loginStoreCode,
     setLoginStoreCode,
