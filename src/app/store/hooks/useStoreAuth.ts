@@ -30,9 +30,30 @@ function getStoreWrongRoleMessage(role?: string | null) {
   return "Debes ingresar con un usuario de tienda válido para usar esta app.";
 }
 
+function isValidKronixPassword(value: string) {
+  const clean = String(value ?? "").trim();
+  return clean.length >= 8 && /[a-zA-Z]/.test(clean) && /\d/.test(clean);
+}
+
+const KRONIX_PASSWORD_POLICY_MESSAGE =
+  "La nueva contraseña debe tener mínimo 8 caracteres y combinar letras y números. No necesita símbolos.";
+
+function readApiErrorMessage(raw: string) {
+  const text = String(raw ?? "").trim();
+  if (!text) return "";
+
+  try {
+    const parsed = JSON.parse(text);
+    const message = String(parsed?.message ?? parsed?.error ?? "").trim();
+    return message || text;
+  } catch {
+    return text;
+  }
+}
+
 export function useStoreAuth() {
   const [storeCode, setStoreCode] = useState<string>("");
-const [inputStoreCode, setInputStoreCode] = useState<string>("");
+  const [inputStoreCode, setInputStoreCode] = useState<string>("");
 
   const [accessToken, setAccessToken] = useState<string>("");
   const [authChecked, setAuthChecked] = useState(false);
@@ -241,7 +262,7 @@ const [inputStoreCode, setInputStoreCode] = useState<string>("");
 
       if (!res2.ok) {
         const txt2 = await res2.text().catch(() => "");
-        throw new Error(txt2 || `Error ${res2.status}`);
+        throw new Error(readApiErrorMessage(txt2) || `Error ${res2.status}`);
       }
 
       const ct2 = res2.headers.get("content-type") || "";
@@ -250,7 +271,7 @@ const [inputStoreCode, setInputStoreCode] = useState<string>("");
 
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
-      throw new Error(txt || `Error ${res.status}`);
+      throw new Error(readApiErrorMessage(txt) || `Error ${res.status}`);
     }
 
     const ct = res.headers.get("content-type") || "";
@@ -284,7 +305,7 @@ const [inputStoreCode, setInputStoreCode] = useState<string>("");
 
       if (!res.ok) {
         const txt = await res.text().catch(() => "");
-        throw new Error(txt || `Error ${res.status}`);
+        throw new Error(readApiErrorMessage(txt) || `Error ${res.status}`);
       }
 
       await res.json().catch(() => null);
@@ -314,7 +335,7 @@ const [inputStoreCode, setInputStoreCode] = useState<string>("");
         return;
       }
 
-      const res = await fetch(apiUrl("/auth/request-password-reset"), {
+      const res = await fetch(apiUrl("/auth/forgot-password"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -326,19 +347,15 @@ const [inputStoreCode, setInputStoreCode] = useState<string>("");
 
       if (!res.ok) {
         const txt = await res.text().catch(() => "");
-        if (res.status === 404) {
-          setForgotErr(
-            "Aún no está habilitada la recuperación automática en el backend. (Falta endpoint /auth/request-password-reset)."
-          );
-          return;
-        }
-        throw new Error(txt || `Error ${res.status}`);
+        throw new Error(readApiErrorMessage(txt) || `Error ${res.status}`);
       }
 
-      setForgotMsg("Listo ✅ Te enviamos un código de recuperación. Revisa SMS / WhatsApp / Email según tu cuenta.");
+      setForgotMsg(
+        "Solicitud recibida ✅ Si la cuenta existe, recibirás las instrucciones de recuperación por el canal autorizado."
+      );
       setForgotStep("CONFIRM");
     } catch (e: any) {
-      setForgotErr(e?.message ?? "No se pudo solicitar el código.");
+      setForgotErr(e?.message ?? "No se pudo solicitar la recuperación.");
     } finally {
       setForgotLoading(false);
     }
@@ -364,8 +381,8 @@ const [inputStoreCode, setInputStoreCode] = useState<string>("");
         setForgotErr("Ingresa el código de recuperación.");
         return;
       }
-      if (!p1 || p1.length < 6) {
-        setForgotErr("La nueva contraseña debe tener al menos 6 caracteres.");
+      if (!isValidKronixPassword(p1)) {
+        setForgotErr(KRONIX_PASSWORD_POLICY_MESSAGE);
         return;
       }
       if (p1 !== p2) {
@@ -385,11 +402,12 @@ const [inputStoreCode, setInputStoreCode] = useState<string>("");
 
       if (!res.ok) {
         const txt = await res.text().catch(() => "");
-        if (res.status === 404) {
-          setForgotErr("Aún no está habilitado el reset en backend. (Falta endpoint /auth/reset-password).");
+        const message = readApiErrorMessage(txt);
+        if (message.toLowerCase().includes("contraseña") || message.toLowerCase().includes("password")) {
+          setForgotErr(KRONIX_PASSWORD_POLICY_MESSAGE);
           return;
         }
-        throw new Error(txt || `Error ${res.status}`);
+        throw new Error(message || `Error ${res.status}`);
       }
 
       setForgotMsg("Contraseña actualizada ✅ Ya puedes iniciar sesión.");
@@ -413,6 +431,9 @@ const [inputStoreCode, setInputStoreCode] = useState<string>("");
     setForgotMsg(null);
     setForgotIdentifier(String(loginStoreCode ?? "").trim());
     setForgotStep("REQUEST");
+    setResetCode("");
+    setNewPassword("");
+    setNewPassword2("");
     setAuthView("FORGOT");
   }
 
@@ -420,6 +441,9 @@ const [inputStoreCode, setInputStoreCode] = useState<string>("");
     setForgotErr(null);
     setForgotMsg(null);
     setForgotStep("REQUEST");
+    setResetCode("");
+    setNewPassword("");
+    setNewPassword2("");
     setAuthView("LOGIN");
   }
 
