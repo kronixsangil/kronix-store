@@ -55,16 +55,11 @@ export default function StoreAuthScreen({
   forgotLoading,
   forgotMsg,
   forgotErr,
-  resetCode,
-  setResetCode,
-  newPassword,
-  setNewPassword,
-  newPassword2,
-  setNewPassword2,
   requestPasswordReset,
-  confirmPasswordReset,
   backToLogin,
 }: Props) {
+  const hasRecoveryRequest = forgotStep === "CONFIRM" || !!forgotMsg;
+
   return (
     <main className="h-screen min-h-screen overflow-y-auto ct-store-bg [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <div className="mx-auto w-full max-w-[1240px] px-3 py-3 sm:px-4">
@@ -209,7 +204,9 @@ export default function StoreAuthScreen({
                                 {showPassword ? "🙈" : "👁"}
                               </button>
                             </div>
-                          </div>                                                    {loginErr ? (
+                          </div>
+
+                          {loginErr ? (
                             <div className="rounded-[18px] bg-red-50 p-4 text-[13px] text-red-800 ring-1 ring-red-200">
                               {loginErr}
                             </div>
@@ -250,7 +247,7 @@ export default function StoreAuthScreen({
                             </div>
 
                             <div className="mt-1 text-[13px] font-semibold text-slate-600">
-                              Solicita recuperación y usa la contraseña temporal autorizada por KroniX
+                              Solicita recuperación y usa la contraseña temporal autorizada por KroniX.
                             </div>
                           </div>
 
@@ -266,135 +263,90 @@ export default function StoreAuthScreen({
                         <div className="mt-6 space-y-4">
                           <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
                             <div className="text-[11px] font-bold text-slate-500">
-                              Paso {forgotStep === "REQUEST" ? "1" : "2"} de 2
+                              Paso {hasRecoveryRequest ? "2" : "1"} de 2
                             </div>
 
                             <div className="mt-1 text-[13px] font-extrabold text-slate-900">
-                              {forgotStep === "REQUEST"
-                                ? "Solicitar código"
-                                : "Confirmar y cambiar contraseña"}
+                              {hasRecoveryRequest
+                                ? "Revisa tu información"
+                                : "Solicitar recuperación"}
                             </div>
                           </div>
 
-                          <div>
-                            <div className="text-[13px] font-extrabold text-slate-700">
-                              Usuario / Teléfono / Email
+                          {hasRecoveryRequest ? (
+                            <div className="rounded-[22px] border border-emerald-200 bg-emerald-50 px-5 py-6 text-center ring-1 ring-emerald-100">
+                              <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border-2 border-emerald-500 bg-white text-[26px] shadow-sm">
+                                ✉️
+                              </div>
+
+                              <div className="mt-4 text-[20px] font-black text-emerald-700">
+                                Solicitud enviada
+                              </div>
+
+                              <div className="mx-auto mt-3 max-w-[320px] text-[13px] font-semibold leading-6 text-slate-800">
+                                Si tu cuenta existe, el equipo KroniX revisará la solicitud y te contactará por WhatsApp Business.
+                              </div>
+
+                              <div className="mx-auto mt-5 rounded-[18px] border border-slate-200 bg-white px-5 py-4 text-center text-[17px] font-black text-slate-950 shadow-sm">
+                                {forgotIdentifier || "Usuario no indicado"}
+                              </div>
+
+                              <div className="mx-auto mt-5 max-w-[320px] text-[13px] font-semibold leading-6 text-slate-700">
+                                El operador podrá restablecer tu contraseña temporalmente.
+                                Por seguridad, deberás cambiarla al iniciar sesión.
+                              </div>
                             </div>
-
-                            <input
-                              value={forgotIdentifier}
-                              onChange={(e) =>
-                                setForgotIdentifier(e.target.value)
-                              }
-                              className="mt-2 h-[52px] w-full rounded-[18px] border border-slate-200 bg-slate-50 px-5 text-[16px] font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-200"
-                              placeholder="store1"
-                            />
-                          </div>
-
-                          {forgotStep === "CONFIRM" ? (
+                          ) : (
                             <>
                               <div>
                                 <div className="text-[13px] font-extrabold text-slate-700">
-                                  Código
+                                  Usuario / Teléfono / Email
                                 </div>
 
                                 <input
-                                  value={resetCode}
-                                  onChange={(e) =>
-                                    setResetCode(e.target.value)
-                                  }
+                                  value={forgotIdentifier}
+                                  onChange={(e) => setForgotIdentifier(e.target.value)}
                                   className="mt-2 h-[52px] w-full rounded-[18px] border border-slate-200 bg-slate-50 px-5 text-[16px] font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-200"
-                                  placeholder="123456"
+                                  placeholder="store1"
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" && !forgotLoading) {
+                                      requestPasswordReset();
+                                    }
+                                  }}
                                 />
                               </div>
 
-                              <div className="grid gap-3 sm:grid-cols-2">
-                                <div>
-                                  <div className="text-[13px] font-extrabold text-slate-700">
-                                    Nueva contraseña
-                                  </div>
-
-                                  <input
-                                    value={newPassword}
-                                    onChange={(e) =>
-                                      setNewPassword(e.target.value)
-                                    }
-                                    type="password"
-                                    className="mt-2 h-[52px] w-full rounded-[18px] border border-slate-200 bg-slate-50 px-5 text-[16px] font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-200"
-                                    placeholder="Ej: Kronix123"
-                                  />
+                              {forgotErr ? (
+                                <div className="rounded-[18px] bg-red-50 p-4 text-[13px] text-red-800 ring-1 ring-red-200">
+                                  {forgotErr}
                                 </div>
+                              ) : null}
 
-                                <div>
-                                  <div className="text-[13px] font-extrabold text-slate-700">
-                                    Confirmar
-                                  </div>
-
-                                  <input
-                                    value={newPassword2}
-                                    onChange={(e) =>
-                                      setNewPassword2(e.target.value)
-                                    }
-                                    type="password"
-                                    className="mt-2 h-[52px] w-full rounded-[18px] border border-slate-200 bg-slate-50 px-5 text-[16px] font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-200"
-                                    placeholder="Ej: Kronix123"
-                                  />
-                                </div>
-                              </div>
+                              <button
+                                type="button"
+                                onClick={requestPasswordReset}
+                                disabled={forgotLoading}
+                                className="inline-flex h-[56px] w-full items-center justify-center rounded-[18px] bg-slate-900 px-6 text-[16px] font-extrabold text-white hover:bg-slate-800 disabled:opacity-60"
+                              >
+                                {forgotLoading ? "Solicitando…" : "Solicitar recuperación"}
+                              </button>
                             </>
-                          ) : null}
-
-                          {forgotErr ? (
-                            <div className="rounded-[18px] bg-red-50 p-4 text-[13px] text-red-800 ring-1 ring-red-200">
-                              {forgotErr}
-                            </div>
-                          ) : null}
-
-                          {forgotMsg ? (
-                            <div className="rounded-[18px] bg-emerald-50 p-4 text-[13px] text-emerald-900 ring-1 ring-emerald-200">
-                              {forgotMsg}
-                            </div>
-                          ) : null}
-
-                          {forgotStep === "REQUEST" ? (
-                            <button
-                              type="button"
-                              onClick={requestPasswordReset}
-                              disabled={forgotLoading}
-                              className="inline-flex h-[56px] w-full items-center justify-center rounded-[18px] bg-slate-900 px-6 text-[16px] font-extrabold text-white hover:bg-slate-800 disabled:opacity-60"
-                            >
-                              {forgotLoading
-                                ? "Enviando…"
-                                : "Enviar código"}
-                            </button>
-                          ) : (
-                            <div className="grid gap-3 sm:grid-cols-2">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setForgotStep("REQUEST");
-                                }}
-                                disabled={forgotLoading}
-                                className="inline-flex h-[56px] w-full items-center justify-center rounded-[18px] bg-white px-6 text-[16px] font-extrabold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-60"
-                              >
-                                Volver
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={confirmPasswordReset}
-                                disabled={forgotLoading}
-                                className="inline-flex h-[56px] w-full items-center justify-center rounded-[18px] bg-emerald-600 px-6 text-[16px] font-extrabold text-white hover:bg-emerald-700 disabled:opacity-60"
-                              >
-                                {forgotLoading
-                                  ? "Guardando…"
-                                  : "Cambiar contraseña"}
-                              </button>
-                            </div>
                           )}
 
+                          {hasRecoveryRequest ? (
+                            <button
+                              type="button"
+                              onClick={backToLogin}
+                              className="inline-flex h-[56px] w-full items-center justify-center rounded-[18px] bg-white px-6 text-[16px] font-extrabold text-emerald-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                            >
+                              ↩ Volver a iniciar sesión
+                            </button>
+                          ) : null}
+
                           <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4 text-[13px] leading-snug text-slate-600">
-                            Si no recibes respuesta, verifica tu número/email asociado o contacta soporte.
+                            {hasRecoveryRequest
+                              ? "Si no recibes respuesta, verifica tu número/email asociado o contacta soporte."
+                              : "Tu solicitud será atendida por soporte KroniX. Recibirás una contraseña temporal por WhatsApp Business."}
                           </div>
                         </div>
                       </>

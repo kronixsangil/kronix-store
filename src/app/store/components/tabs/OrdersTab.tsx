@@ -782,7 +782,7 @@ function KronixEnviosPanel({
           <div className="relative z-10 flex items-start gap-4">
             <div className="relative h-[70px] w-[70px] shrink-0">
               <Image
-                src="/branding/kronix/enviar-Paquete2.png"
+                src="/branding/kronix/Enviar-Paquete2.png"
                 alt="KroniX Envíos"
                 fill
                 className="object-contain scale-[1.4] drop-shadow-[0_12px_20px_rgba(0,0,0,0.28)]"
