@@ -258,26 +258,13 @@ function StoreForcePasswordChangeScreen({
       <main className="min-h-screen w-screen overflow-hidden ct-store-bg ct-tablet">
         <div className="flex h-screen w-screen items-center justify-center px-3 py-3">
           <div className="w-full max-w-[760px] overflow-hidden rounded-[26px] border border-white/70 bg-white/95 shadow-[0_24px_80px_rgba(15,23,42,0.16)] backdrop-blur">
-            <div className="bg-[linear-gradient(135deg,#0f172a_0%,#1e293b_54%,#475569_100%)] px-7 py-6 text-white">
-              <div className="inline-flex rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white/75">
-                Seguridad KroniX
-              </div>
+            <div className="bg-[linear-gradient(135deg,#0f172a_0%,#1e293b_54%,#475569_100%)] px-7 py-6 text-white">              
               <h1 className="mt-4 text-[28px] font-black leading-none">
                 Cambio de contraseña requerido
               </h1>
               <p className="mt-3 max-w-[620px] text-[14px] font-semibold leading-6 text-white/75">
                 Tu contraseña fue restablecida por KroniX. Debes cambiarla antes de continuar.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className="rounded-full bg-emerald-500/15 px-3 py-1.5 text-xs font-bold text-emerald-200 ring-1 ring-emerald-400/20">
-                  {storeName || "Store App"}
-                </span>
-                {storeCityLabel ? (
-                  <span className="rounded-full bg-sky-500/15 px-3 py-1.5 text-xs font-bold text-sky-200 ring-1 ring-sky-400/20">
-                    {storeCityLabel}
-                  </span>
-                ) : null}
-              </div>
+              </p>              
             </div>
 
             <div className="grid gap-4 p-5 md:grid-cols-[280px_minmax(0,1fr)]">
