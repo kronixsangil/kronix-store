@@ -136,6 +136,7 @@ type CreateCourierOrderResponse = {
   totalCOP?: number;
   createdAt?: string;
   orderType?: "COURIER" | "STORE" | string;
+  workerCommissionCOP?: number;
 };
 
 const STORE_KRONIX_ENVIOS_LAST_ORDER_KEY = "kronix:store:kronix-envios:last-order:v1";
@@ -672,17 +673,19 @@ function KronixEnviosPanel({
 
     try {
       const customerId = String(authMe?.user?.sub ?? authMe?.user?.id ?? "").trim();
-      const orderTotal = pricing.totalCOP || 3000;
-      const baseService = pricing.baseServiceCOP || Math.max(0, orderTotal - (pricing.serviceFeeCOP || 0));
-      const serviceFee = pricing.serviceFeeCOP || 500;
+      // La tienda no paga cargos a KRONIX por este servicio.
+      // La comisión se debita al Worker cuando finaliza la orden.
+      const orderTotal = 0;
+      const baseService = 0;
+      const serviceFee = 0;
 
       const packageDescription = [
         "SERVICIO: KroniX Envíos solicitado desde Store App",
         "TIPO DE PAQUETE: Pedido externo del comercio",
         `TIENDA: ${storeName}`,
         `ZONA CALCULADA: ${pricing.zoneNumber ? `Zona ${pricing.zoneNumber}` : "Pendiente"}`,
-        `VALOR BASE: ${formatCOP(baseService)}`,
-        `COSTO SERVICIO: ${formatCOP(serviceFee)}`,
+        "COBRO KRONIX A LA TIENDA: $0",
+        "COMISIÓN KRONIX: Se descuenta al Worker únicamente cuando finaliza el servicio.",
         "NOTA OPERATIVA: La tienda entregará al motorizado el paquete, datos del cliente y destino final en sitio.",
         "COBROS EXTRA: Si existen condiciones especiales, el conductor podrá acordar valor adicional directamente con el comercio o cliente final.",
       ].join("\n");
@@ -742,19 +745,6 @@ function KronixEnviosPanel({
         throw new Error("La orden se creó, pero la API no devolvió un id válido.");
       }
 
-      try {
-        await apiFetch(`/orders/${encodeURIComponent(orderId)}/payment`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            status: "PAID",
-            ref: `STORE-AUTO-${orderId}`,
-          }),
-        });
-      } catch {
-        // Si el backend no permite a STORE marcar pago sobre una orden courier,
-        // dejamos la orden creada. El siguiente paso será endpoint dedicado de créditos/wallet store.
-      }
 
       try {
         localStorage.setItem(
@@ -843,36 +833,6 @@ function KronixEnviosPanel({
                     <span className="text-right font-bold text-slate-800">
                       {contactPhone || "Sin teléfono"}
                     </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-[18px] border border-slate-200 bg-white p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-[17px] font-black text-slate-900">Precio estimado</div>
-                    <div className="mt-1 text-[12px] font-semibold text-slate-500">
-                      Pago automático temporal mientras activamos créditos o Wallet Store.
-                    </div>
-                  </div>
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black text-slate-700 ring-1 ring-slate-200">
-                    {pricing.zoneNumber ? `Zona ${pricing.zoneNumber}` : "Auto"}
-                  </span>
-                </div>
-
-                <div className="mt-3 rounded-[16px] bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
-                  <div className="flex items-center justify-between py-1.5 text-[13px] font-semibold text-slate-600">
-                    <span>Base servicio</span>
-                    <span className="font-black text-slate-900">{formatCOP(pricing.baseServiceCOP)}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-1.5 text-[13px] font-semibold text-slate-600">
-                    <span>Costo servicio</span>
-                    <span className="font-black text-slate-900">{formatCOP(pricing.serviceFeeCOP || 500)}</span>
-                  </div>
-                  <div className="my-2 border-t border-slate-200" />
-                  <div className="flex items-center justify-between py-1.5 text-[14px] font-black text-slate-900">
-                    <span>Total estimado</span>
-                    <span>{formatCOP(pricing.totalCOP || 3000)}</span>
                   </div>
                 </div>
               </div>

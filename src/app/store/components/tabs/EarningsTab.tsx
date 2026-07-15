@@ -43,6 +43,8 @@ type StoreCourierRow = {
   packageType?: string | null;
   packageDescription?: string | null;
   customerNote?: string | null;
+  workerCommissionCOP?: number;
+  workerCommissionDebitedAt?: string | null;
   driver?: {
     id?: string;
     name?: string | null;
@@ -76,6 +78,9 @@ type StoreCourierResponse = {
     cancelledCOP?: number;
     pendingReconciliationCOP?: number;
     averageServiceCOP?: number;
+    totalWorkerCommissionCOP?: number;
+    debitedWorkerCommissionCOP?: number;
+    storeChargeCOP?: number;
   };
   byPeriod?: StoreCourierPeriodRow[];
   rows?: StoreCourierRow[];
@@ -436,7 +441,7 @@ function PeriodRow({
 function CourierServiceCompactRow({ row }: { row: StoreCourierRow }) {
   const driverName = String(row.driver?.name ?? "").trim();
   const vehiclePlate = String(row.driver?.vehicle?.plate ?? "").trim();
-  const totalCOP = Math.round(Number(row.totalCOP ?? 0));
+  const totalCOP = Math.round(Number(row.workerCommissionCOP ?? 0));
 
   return (
     <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto] items-center gap-3 border-t border-slate-100 px-3 py-2.5 first:border-t-0">
@@ -471,7 +476,7 @@ function CourierServiceCompactRow({ row }: { row: StoreCourierRow }) {
       <div className="shrink-0 text-right">
         <div className="text-[14px] font-black text-slate-900">{formatCOP(totalCOP)}</div>
         <div className="mt-0.5 text-[9px] font-black uppercase tracking-[0.10em] text-slate-400">
-          A conciliar
+          Comisión Worker
         </div>
       </div>
     </div>
@@ -528,7 +533,7 @@ function CourierPeriodAccordionCard({
             {formatCOP(Math.round(period.totalCOP || 0))}
           </div>
           <div className="mt-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
-            A conciliar
+            Comisión Worker
           </div>
         </div>
       </button>
@@ -615,7 +620,7 @@ export default function EarningsTab({
 
       const info = getCourierPeriodInfo(date, courierViewScope);
       const existing = map.get(info.key);
-      const amount = Math.round(Number(row.totalCOP ?? 0));
+      const amount = Math.round(Number(row.workerCommissionCOP ?? 0));
       const delivered = isDeliveredService(row) ? 1 : 0;
       const cancelled = isCancelledService(row) ? 1 : 0;
       const active = !delivered && !cancelled ? 1 : 0;
@@ -670,7 +675,7 @@ export default function EarningsTab({
             </div>
 
             <div className="mt-1 ct-section-desc">
-              Vista financiera compacta para tablet horizontal. Incluye ventas entregadas y servicios KroniX Envíos solicitados por la tienda.
+              Vista financiera de ventas y registro operativo de KroniX Envíos. Estos envíos no generan cobro KRONIX para la tienda.
             </div>
           </div>
 
@@ -728,15 +733,15 @@ export default function EarningsTab({
             />
 
             <StatCard
-              label="Total servicios"
-              value={courierLoading ? "..." : formatCOP(Math.round(courierSummary.totalCOP ?? 0))}
-              helper="Valor completo registrado para corte."
+              label="Comisión generada"
+              value={courierLoading ? "..." : formatCOP(Math.round(courierSummary.totalWorkerCommissionCOP ?? 0))}
+              helper="Comisión cobrada a los Workers por servicios finalizados."
             />
 
             <StatCard
-              label="Pendiente conciliación"
-              value={courierLoading ? "..." : formatCOP(Math.round(courierSummary.pendingReconciliationCOP ?? 0))}
-              helper="Se conciliará desde CTCC en fecha de corte."
+              label="Costo KRONIX tienda"
+              value={formatCOP(0)}
+              helper="La tienda no paga comisión ni cargo de plataforma."
               tone="dark"
             />
 
@@ -801,7 +806,7 @@ export default function EarningsTab({
                   <div>
                     <div className="text-[18px] font-black text-slate-900">KroniX Envíos</div>
                     <div className="mt-1 text-[12px] font-medium text-slate-500">
-                      Record para corte y conciliación posterior desde CTCC.
+                      Registro operativo. La comisión se descuenta al Worker al completar el servicio.
                     </div>
                   </div>
 
@@ -817,13 +822,13 @@ export default function EarningsTab({
 
                 <div className="mt-2 rounded-[14px] border border-slate-200 bg-slate-50 px-4 py-3">
                   <div className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-400">
-                    Valor a conciliar
+                    Comisión generada a Workers
                   </div>
                   <div className="mt-1 text-[22px] font-black leading-none text-slate-900">
-                    {formatCOP(Math.round(courierSummary.pendingReconciliationCOP ?? 0))}
+                    {formatCOP(Math.round(courierSummary.totalWorkerCommissionCOP ?? 0))}
                   </div>
                   <div className="mt-2 text-[12px] font-medium leading-snug text-slate-500">
-                    No se cobra aquí. Este valor queda registrado para balance en fechas de corte.
+                    Este valor corresponde a ingresos KRONIX cobrados a los Workers, no a una deuda de la tienda.
                   </div>
                 </div>
 
@@ -881,7 +886,7 @@ export default function EarningsTab({
                   <div>
                     <div className="text-[18px] font-black text-slate-900">Record KroniX Envíos</div>
                     <div className="mt-1 text-[12px] font-medium text-slate-500">
-                      Resumen agrupado para evitar filas largas. Abre cada período con + para ver el desglose.
+                      Comisiones de Worker agrupadas por período. Abre cada período con + para ver los servicios.
                     </div>
                   </div>
 
@@ -921,7 +926,7 @@ export default function EarningsTab({
                     {courierLoading ? "..." : `${courierRows.length} servicios`}
                   </div>
                   <div className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-extrabold text-slate-700">
-                    Total {courierLoading ? "..." : formatCOP(Math.round(courierSummary.pendingReconciliationCOP ?? 0))}
+                    Comisiones {courierLoading ? "..." : formatCOP(Math.round(courierSummary.totalWorkerCommissionCOP ?? 0))}
                   </div>
                 </div>
 
@@ -947,7 +952,7 @@ export default function EarningsTab({
                           No hay KroniX Envíos registrados
                         </div>
                         <div className="mt-2 text-[13px] font-medium text-slate-500">
-                          Los servicios solicitados desde el botón KroniX Envíos quedarán agrupados aquí para conciliación.
+                          Los servicios solicitados desde KroniX Envíos aparecerán aquí junto con la comisión generada al Worker.
                         </div>
                       </div>
                     </div>
