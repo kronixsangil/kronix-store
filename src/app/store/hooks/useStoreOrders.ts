@@ -45,6 +45,14 @@ function shouldNotifyReadyForPickup(order: ApiOrder | null | undefined) {
 }
 
 function resolveStoreVisibleStage(order: ApiOrder, storeCode: string): StoreVisibleStage {
+  if (order.sourceType === "LUNCH_ORDER") {
+    const lunchStatus = String(order.lunchStatus ?? "").toUpperCase();
+    if (lunchStatus === "PENDING_PAYMENT_REVIEW") return "PENDING";
+    if (lunchStatus === "CONFIRMED" || lunchStatus === "PREPARING") return "PREPARING";
+    if (lunchStatus === "READY") return "PREPARING";
+    if (lunchStatus === "COMPLETED") return "DELIVERED";
+    return "HIDDEN";
+  }
   const myPickup = getMyPickup(order, storeCode);
   const flow = normFlow(order.flowStatus);
   const status = normStatus(order.status);
@@ -74,6 +82,62 @@ function resolveStoreVisibleStage(order: ApiOrder, storeCode: string): StoreVisi
   return "HIDDEN";
 }
 
+
+function adaptLunchOrder(row: any, storeCode: string): ApiOrder {
+  const lunchStatus = String(row?.status ?? "PENDING_PAYMENT_REVIEW").toUpperCase();
+  const confirmed = ["CONFIRMED", "PREPARING", "READY", "COMPLETED"].includes(lunchStatus);
+  const rejected = lunchStatus === "REJECTED";
+  const courierStatus = String(row?.courier?.status ?? "").toUpperCase();
+  const courierFlow = String(row?.courier?.flowStatus ?? "").toUpperCase();
+  const courierDelivered = courierStatus === "DELIVERED" || courierFlow === "DELIVERED";
+  const courierEnRoute = courierStatus === "EN_ROUTE" || courierFlow === "EN_ROUTE";
+  const completed = lunchStatus === "COMPLETED" || courierDelivered;
+  const ready = lunchStatus === "READY";
+
+  const snapshot = Array.isArray(row?.itemsSnapshot) ? row.itemsSnapshot : [];
+  const items = snapshot.map((item: any) => ({
+    storeId: String(row?.storeId ?? "") || null,
+    productId: String(item?.itemId ?? "") || null,
+    name: String(item?.name ?? "Producto"),
+    description: item?.automatic ? "Incluido automáticamente" : null,
+    qty: Math.max(0, Number(item?.qty ?? 0)),
+    priceCOP: Math.max(0, Number(item?.priceCOP ?? 0)),
+  }));
+
+  const totalCOP = items.reduce((sum: number, item: any) => sum + item.qty * item.priceCOP, 0);
+
+  return {
+    id: String(row?.id ?? ""),
+    sourceType: "LUNCH_ORDER",
+    lunchStatus,
+    fulfillment: String(row?.fulfillment ?? "DELIVERY").toUpperCase(),
+    deliveryReference: row?.deliveryReference ?? null,
+    lunchPaymentMethod: row?.paymentMethod ?? null,
+    status: rejected ? "CANCELLED" : completed ? "DELIVERED" : courierEnRoute ? "EN_ROUTE" : "AVAILABLE",
+    flowStatus: rejected ? "CANCELLED" : completed ? "DELIVERED" : courierEnRoute ? "EN_ROUTE" : ready ? "PREPARING" : lunchStatus === "PREPARING" ? "PREPARING" : confirmed ? "STORE_CONFIRMED" : "WAITING_CONFIRMATION",
+    paymentStatus: confirmed ? "PAID" : "PENDING",
+    paymentReference: row?.paymentReference ?? null,
+    paidAt: row?.paymentVerifiedAt ?? null,
+    createdAt: String(row?.createdAt ?? new Date().toISOString()),
+    updatedAt: String(row?.updatedAt ?? row?.createdAt ?? new Date().toISOString()),
+    dropoffAddress: String(row?.deliveryAddress ?? (String(row?.fulfillment).toUpperCase() === "PICKUP" ? "Recoge en el restaurante" : "")),
+    customerNote: row?.customerNote ?? null,
+    totalCOP,
+    deliveryFeeCOP: 0,
+    tipCOP: 0,
+    pickups: [{
+      sequence: 1,
+      pickupAddress: String(row?.store?.address ?? "Restaurante"),
+      storeConfirmedAt: confirmed ? (row?.paymentVerifiedAt ?? row?.updatedAt ?? row?.createdAt) : null,
+      storeRejectedAt: rejected ? (row?.updatedAt ?? row?.createdAt) : null,
+      rejectReason: rejected ? "Pedido rechazado por el restaurante" : null,
+      store: { id: String(row?.storeId ?? ""), storeCode, name: String(row?.store?.name ?? "Restaurante") },
+    }],
+    items,
+    ...(row?.customer ? { customer: row.customer } : {}),
+  } as ApiOrder;
+}
+
 export function useStoreOrders({
   storeCode,
   storeFetch,
@@ -100,9 +164,19 @@ export function useStoreOrders({
     setErr(null);
 
     try {
-      const list = await storeFetch<ApiOrder[]>(`/orders/store`, { method: "GET" });
+      const [regularResult, lunchResult] = await Promise.allSettled([
+        storeFetch<ApiOrder[]>(`/orders/store`, { method: "GET" }),
+        storeFetch<any[]>(`/lunch/store/orders`, { method: "GET" }),
+      ]);
 
-      const normalized = Array.isArray(list) ? list : [];
+      if (regularResult.status === "rejected" && lunchResult.status === "rejected") {
+        throw regularResult.reason;
+      }
+
+      const regular = regularResult.status === "fulfilled" && Array.isArray(regularResult.value) ? regularResult.value : [];
+      const lunchRaw = lunchResult.status === "fulfilled" && Array.isArray(lunchResult.value) ? lunchResult.value : [];
+      const lunch = lunchRaw.map((row) => adaptLunchOrder(row, storeCode));
+      const normalized = [...regular, ...lunch];
       normalized.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
       setOrders(normalized);
 
@@ -162,6 +236,16 @@ export function useStoreOrders({
     setBusyId(id);
 
     try {
+      const current = orders.find((o) => o.id === id);
+      if (current?.sourceType === "LUNCH_ORDER") {
+        await storeFetch(`/lunch/store/orders/${id}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "CONFIRMED" }),
+        });
+        await load();
+        return;
+      }
       await storeFetch(`/orders/${id}/store-confirmed`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -187,6 +271,16 @@ export function useStoreOrders({
 
     try {
       const finalReason = String(reason ?? "").trim() || "Otro";
+      const current = orders.find((o) => o.id === id);
+      if (current?.sourceType === "LUNCH_ORDER") {
+        await storeFetch(`/lunch/store/orders/${id}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "REJECTED", reason: finalReason }),
+        });
+        await load();
+        return;
+      }
       await storeFetch(`/orders/${id}/store-rejected`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -212,6 +306,15 @@ export function useStoreOrders({
 
     try {
       const currentOrder = orders.find((o) => o.id === id) ?? null;
+      if (currentOrder?.sourceType === "LUNCH_ORDER") {
+        await storeFetch(`/lunch/store/orders/${id}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "PREPARING" }),
+        });
+        await load();
+        return;
+      }
       const readyMode = shouldNotifyReadyForPickup(currentOrder);
 
       await storeFetch(`/orders/${id}/preparing`, {

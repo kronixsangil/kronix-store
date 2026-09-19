@@ -19,6 +19,7 @@ import StoreAuthScreen from "./components/auth/StoreAuthScreen";
 import StoreDashboardHeader from "./components/layout/StoreDashboardHeader";
 import OrdersTab from "./components/tabs/OrdersTab";
 import ProductsTab from "./components/tabs/ProductsTab";
+import LunchTab from "./components/tabs/LunchTab";
 import EarningsTab from "./components/tabs/EarningsTab";
 import SettingsTab from "./components/tabs/SettingsTab";
 import ProfileTab from "./components/tabs/ProfileTab";
@@ -621,6 +622,38 @@ export default function StoreDashboard() {
           return;
         }
 
+        if (type === "store.courier.status") {
+          const status = String(parsed?.payload?.status ?? "").toUpperCase();
+          const flowStatus = String(parsed?.payload?.flowStatus ?? "").toUpperCase();
+          const eventOrderId = String(parsed?.orderId ?? "").trim();
+          const suffix = eventOrderId ? ` ${shortOrderId(eventOrderId)}` : "";
+
+          if (status === "ASSIGNED") {
+            alerts.fireOperationalAlert(
+              "🛵 Domiciliario asignado",
+              `Ya hay un domiciliario asignado al servicio${suffix}.`,
+              "DRIVER_ARRIVED"
+            );
+          } else if (status === "EN_ROUTE" || flowStatus === "EN_ROUTE") {
+            clearDriverWaitingNotice(eventOrderId);
+            alerts.fireOperationalAlert(
+              "🛣️ Domiciliario en ruta",
+              `El pedido${suffix} ya salió hacia el cliente.`,
+              "DRIVER_ARRIVED"
+            );
+          } else if (status === "DELIVERED" || flowStatus === "DELIVERED") {
+            clearDriverWaitingNotice(eventOrderId);
+            alerts.fireOperationalAlert(
+              "✅ Pedido entregado",
+              `El pedido${suffix} fue entregado correctamente.`,
+              "GENERIC"
+            );
+          }
+
+          scheduleRefresh();
+          return;
+        }
+
         if (type === "order.updated") {
           const payloadStoreIds = Array.isArray(parsed?.payload?.storeIds)
             ? parsed.payload.storeIds.map((v: any) => String(v ?? "").trim()).filter(Boolean)
@@ -1213,8 +1246,13 @@ export default function StoreDashboard() {
                   savingStoreState={settings.savingStoreState}
                   saveStoreOperationalState={settings.saveStoreOperationalState}
                   onRefresh={handleRefresh}
+                  storeFetch={auth.storeFetch}
                 />
               ) : null}
+
+              {tab === "LUNCH" ? (
+  <LunchTab storeFetch={auth.storeFetch} />
+) : null}
 
               {tab === "PRODUCTS" ? (
                 <ProductsTab

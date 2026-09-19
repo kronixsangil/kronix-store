@@ -1,7 +1,18 @@
 //src\app\api\store\[...path]\route.ts
 import { NextRequest } from "next/server";
 
-const API_BASE = process.env.NEXT_PUBLIC_API || "http://localhost:3004";
+const configuredApi = String(process.env.NEXT_PUBLIC_API || "").trim();
+const isDevelopment = process.env.NODE_ENV !== "production";
+const allowRemoteDevApi = process.env.KRONIX_ALLOW_REMOTE_API_IN_DEV === "true";
+
+// Seguridad de desarrollo: una Store App levantada con `npm run dev` NO debe
+// crear órdenes reales por accidente aunque .env.local conserve la URL de Railway.
+// Para probar deliberadamente contra una API remota en desarrollo se requiere
+// KRONIX_ALLOW_REMOTE_API_IN_DEV=true.
+const API_BASE =
+  isDevelopment && !allowRemoteDevApi
+    ? "http://localhost:3004"
+    : configuredApi || "http://localhost:3004";
 
 function buildTargetUrl(req: NextRequest, pathParts: string[]) {
   const path = pathParts.join("/");

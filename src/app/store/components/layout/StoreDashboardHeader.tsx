@@ -43,6 +43,7 @@ type HeaderTabConfig = {
 
 const HEADER_TABS: HeaderTabConfig[] = [
   { key: "ORDERS", label: "Órdenes", image: "/branding/kronix/settings-orders.png" },
+  { key: "LUNCH", label: "Almuerzos", image: "/branding/kronix/settings-lunch.png" },
   { key: "PRODUCTS", label: "Productos", image: "/branding/kronix/settings-products.png" },
   { key: "EARNINGS", label: "Ganancias", image: "/branding/kronix/settings-earnings.png" },
   { key: "SETTINGS", label: "Config.", image: "/branding/kronix/settings-gear.png" },
@@ -144,7 +145,7 @@ export default function StoreDashboardHeader({
           </div>
 
           <div className="flex min-w-0 items-center justify-center">
-            <div className="grid w-full max-w-[560px] grid-cols-6 gap-1.5">
+            <div className="grid w-full max-w-[650px] grid-cols-7 gap-1.5">
               {HEADER_TABS.map((item) => (
                 <HeaderTabBtn
                   key={item.key}

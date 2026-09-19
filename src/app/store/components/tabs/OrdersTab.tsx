@@ -12,6 +12,7 @@ import {
   type SetStateAction,
 } from "react";
 import OrderDetail from "../OrderDetail";
+import LunchOrderDetail from "../LunchOrderDetail";
 import SmallChip from "../ui/SmallChip";
 import StatePill from "../ui/StatePill";
 import { useStoreCity } from "../context/StoreCityContext";
@@ -62,7 +63,7 @@ type Props = {
 };
 
 type StageKey = "PENDING" | "PREPARING" | "EN_ROUTE" | "DELIVERED";
-type RightPanelMode = "EMPTY" | "ORDER" | "KRONIX_ENVIOS";
+type RightPanelMode = "EMPTY" | "ORDER" | "KRONIX_ENVIOS" | "KRONIX_ENVIOS_HISTORY";
 
 type AuthMeResponse = {
   user?: {
@@ -327,7 +328,7 @@ function KronixEnviosSidebarBtn({
       <div className="pointer-events-none absolute left-2 top-1/2 h-[50px] w-[50px] -translate-y-1/2">
         <Image
           src="/branding/kronix/Enviar-Paquete3.png"
-          alt="Paquete KroniX Envíos"
+          alt="Paquete Domicilio Express"
           fill
           className="object-contain scale-[1.1] translate-x-[-2px] translate-y-[0px] drop-shadow-[0_8px_12px_rgba(0,0,0,0.18)]"
           sizes="50px"
@@ -338,7 +339,7 @@ function KronixEnviosSidebarBtn({
       <div className="pointer-events-none absolute right-[-4px] top-1/2 h-[66px] w-[74px] -translate-y-1/2">
         <Image
           src="/branding/kronix/Enviar-Paquete1.png"
-          alt="Motorizado KroniX Envíos"
+          alt="Motorizado Domicilio Express"
           fill
           className="object-contain scale-[1.1] translate-x-[-18px] translate-y-[3px] drop-shadow-[0_10px_16px_rgba(0,0,0,0.22)]"
           sizes="74px"
@@ -348,7 +349,7 @@ function KronixEnviosSidebarBtn({
       <div className="relative z-10 flex min-h-[50px] items-center">
         <div className="min-w-0 flex-1 pl-[50px] pr-[72px]">
           <div className="text-[13px] font-black leading-tight text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.22)]">
-            KroniX Envíos
+            Domicilio Express
           </div>
           <div className="mt-0.5 text-[10px] font-bold leading-3 text-white/92 drop-shadow-[0_1px_1px_rgba(0,0,0,0.16)]">
             Solicitar motorizado
@@ -621,12 +622,12 @@ function KronixEnviosPanel({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               citySlug,
-              serviceType: "SEND_PACKAGE",
+              serviceType: "PICKUP_AND_DELIVERY",
               points: [
                 {
                   lat: pickupLat,
                   lng: pickupLng,
-                  label: "Punto de recogida KroniX Envíos Store",
+                  label: "Punto de recogida Domicilio Express Store",
                   address: pickupAddress,
                 },
                 {
@@ -680,7 +681,7 @@ function KronixEnviosPanel({
       const serviceFee = 0;
 
       const packageDescription = [
-        "SERVICIO: KroniX Envíos solicitado desde Store App",
+        "SERVICIO: Domicilio Express solicitado desde Store App",
         "TIPO DE PAQUETE: Pedido externo del comercio",
         `TIENDA: ${storeName}`,
         `ZONA CALCULADA: ${pricing.zoneNumber ? `Zona ${pricing.zoneNumber}` : "Pendiente"}`,
@@ -692,7 +693,9 @@ function KronixEnviosPanel({
 
       const payload = {
         orderType: "COURIER" as const,
-        courierServiceType: "SEND_PACKAGE" as const,
+        courierServiceType: "PICKUP_AND_DELIVERY" as const,
+        serviceType: "DELIVERY" as const,
+        serviceKey: "DELIVERY",
         customerId,
         citySlug,
 
@@ -701,7 +704,7 @@ function KronixEnviosPanel({
         dropoffLng: pickupLng,
 
         customerNote:
-          "KroniX Envíos solicitado desde Store App. Motorizado debe llegar al comercio y confirmar en sitio paquete, destino y datos del cliente final.",
+          "Domicilio Express solicitado desde Store App. Motorizado debe llegar al comercio y confirmar en sitio paquete, destino y datos del cliente final.",
 
         deliveryFeeCOP: baseService,
         serviceFeeCOP: serviceFee,
@@ -773,7 +776,7 @@ function KronixEnviosPanel({
             <div className="relative h-[70px] w-[70px] shrink-0">
               <Image
                 src="/branding/kronix/Enviar-Paquete2.png"
-                alt="KroniX Envíos"
+                alt="Domicilio Express"
                 fill
                 className="object-contain scale-[1.4] drop-shadow-[0_12px_20px_rgba(0,0,0,0.28)]"
                 sizes="70px"
@@ -782,7 +785,7 @@ function KronixEnviosPanel({
 
             <div className="min-w-0 flex-1">
               <div className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-100">
-                KroniX Envíos
+                Domicilio Express
               </div>
               <div className="mt-1 text-[24px] font-black leading-tight">
                 Solicita un motorizado para tu negocio
@@ -871,6 +874,161 @@ function KronixEnviosPanel({
             >
               {creating ? "Solicitando..." : "Confirmar servicio"}
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+type KronixEnvioHistoryRow = {
+  id: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  assignedAt?: string | null;
+  deliveredAt?: string | null;
+  cancelledAt?: string | null;
+  status?: string | null;
+  flowStatus?: string | null;
+  workerCommissionCOP?: number | null;
+  workerCommissionDebitedAt?: string | null;
+  pickupAddress?: string | null;
+  dropoffAddress?: string | null;
+  driver?: {
+    id?: string | null;
+    name?: string | null;
+    phone?: string | null;
+    vehicle?: { brand?: string | null; plate?: string | null; color?: string | null } | null;
+  } | null;
+};
+
+type KronixEnviosHistoryResponse = {
+  summary?: { totalServices?: number; deliveredServices?: number; activeServices?: number; cancelledServices?: number };
+  rows?: KronixEnvioHistoryRow[];
+};
+
+function kronixEnvioState(row: KronixEnvioHistoryRow) {
+  const status = String(row.status ?? "").toUpperCase();
+  const flow = String(row.flowStatus ?? "").toUpperCase();
+  if (status === "CANCELLED" || flow === "CANCELLED") return { label: "Cancelado", cls: "bg-red-50 text-red-700 ring-red-200" };
+  if (status === "DELIVERED" || flow === "DELIVERED") return { label: "Entregado", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200" };
+  if (status === "EN_ROUTE" || flow === "EN_ROUTE") return { label: "En ruta", cls: "bg-lime-50 text-lime-700 ring-lime-200" };
+  if (status === "ASSIGNED") return { label: "Domiciliario asignado", cls: "bg-sky-50 text-sky-700 ring-sky-200" };
+  return { label: "Buscando domiciliario", cls: "bg-amber-50 text-amber-700 ring-amber-200" };
+}
+
+function fmtDateTime(value?: string | null) {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  return new Intl.DateTimeFormat("es-CO", { dateStyle: "short", timeStyle: "short" }).format(d);
+}
+
+function KronixEnviosHistoryPanel({ storeFetch, onBack }: { storeFetch?: StoreFetchFn; onBack: () => void }) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<KronixEnviosHistoryResponse>({ rows: [] });
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!storeFetch) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await storeFetch<KronixEnviosHistoryResponse>("/orders/store/kronix-envios?scope=YEARLY", { method: "GET" });
+      setData(result ?? { rows: [] });
+      const rows = Array.isArray(result?.rows) ? result.rows : [];
+      setSelectedId((prev) => (prev && rows.some((r) => r.id === prev) ? prev : rows[0]?.id ?? null));
+    } catch (e: any) {
+      setError(readJsonErrorMessage(e));
+    } finally {
+      setLoading(false);
+    }
+  }, [storeFetch]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const rows = Array.isArray(data.rows) ? data.rows : [];
+  const selected = rows.find((row) => row.id === selectedId) ?? null;
+  const summary = data.summary ?? {};
+
+  return (
+    <div className="h-full min-h-0 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_14px_30px_rgba(15,23,42,0.08)]">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.20em] text-emerald-600">Domicilio Express</div>
+            <div className="mt-1 text-[23px] font-black text-slate-900">Seguimiento e historial</div>
+            <div className="mt-1 text-[12px] font-semibold text-slate-500">Consulta tus solicitudes, domiciliario asignado, comisión y trazabilidad.</div>
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => void load()} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-[12px] font-black text-slate-700 hover:bg-slate-50">Actualizar</button>
+            <button type="button" onClick={onBack} className="rounded-full bg-slate-900 px-4 py-2 text-[12px] font-black text-white">Volver</button>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-4 gap-2">
+          {[
+            ["Total", summary.totalServices ?? rows.length],
+            ["Activos", summary.activeServices ?? 0],
+            ["Entregados", summary.deliveredServices ?? 0],
+            ["Cancelados", summary.cancelledServices ?? 0],
+          ].map(([label, value]) => (
+            <div key={String(label)} className="rounded-[14px] bg-slate-50 px-3 py-3 ring-1 ring-slate-200">
+              <div className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">{label}</div>
+              <div className="mt-1 text-[18px] font-black text-slate-900">{value}</div>
+            </div>
+          ))}
+        </div>
+
+        {error ? <div className="mt-4 rounded-[14px] bg-red-50 px-4 py-3 text-[12px] font-bold text-red-700 ring-1 ring-red-200">{error}</div> : null}
+
+        <div className="mt-4 grid min-h-[430px] grid-cols-[42%_58%] gap-3">
+          <div className="min-h-0 overflow-y-auto rounded-[16px] bg-slate-50 p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {loading ? <div className="p-5 text-center text-[12px] font-bold text-slate-500">Actualizando envíos…</div> : rows.length === 0 ? <div className="p-5 text-center text-[12px] font-bold text-slate-500">Aún no hay Domicilio Express.</div> : rows.map((row) => {
+              const state = kronixEnvioState(row);
+              const active = row.id === selectedId;
+              return <button key={row.id} type="button" onClick={() => setSelectedId(row.id)} className={["mb-2 w-full rounded-[14px] p-3 text-left ring-1 transition", active ? "bg-slate-900 text-white ring-slate-900" : "bg-white text-slate-900 ring-slate-200 hover:bg-slate-50"].join(" ")}>
+                <div className="flex items-center justify-between gap-2"><span className="text-[12px] font-black">{formatShortOrderId(row.id)}</span><span className={["rounded-full px-2 py-1 text-[9px] font-black ring-1", active ? "bg-white/15 text-white ring-white/20" : state.cls].join(" ")}>{state.label}</span></div>
+                <div className={["mt-2 text-[10px] font-semibold", active ? "text-white/70" : "text-slate-500"].join(" ")}>{fmtDateTime(row.createdAt)}</div>
+              </button>;
+            })}
+          </div>
+
+          <div className="min-h-0 overflow-y-auto rounded-[16px] border border-slate-200 bg-white p-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {!selected ? <div className="grid h-full place-items-center text-center text-[13px] font-bold text-slate-400">Selecciona un envío para ver su seguimiento.</div> : (() => {
+              const state = kronixEnvioState(selected);
+              const driverPhone = cleanPhone(selected.driver?.phone);
+              return <div>
+                <div className="flex items-start justify-between gap-3">
+                  <div><div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Servicio</div><div className="mt-1 text-[20px] font-black text-slate-900">Domicilio Express {formatShortOrderId(selected.id)}</div></div>
+                  <span className={["rounded-full px-3 py-1.5 text-[10px] font-black ring-1", state.cls].join(" ")}>{state.label}</span>
+                </div>
+
+                <div className="mt-4 rounded-[16px] bg-slate-50 p-4 ring-1 ring-slate-200">
+                  <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Domiciliario</div>
+                  <div className="mt-2 text-[14px] font-black text-slate-900">{selected.driver?.name || "Aún sin asignar"}</div>
+                  {selected.driver?.vehicle ? <div className="mt-1 text-[11px] font-semibold text-slate-500">{[selected.driver.vehicle.brand, selected.driver.vehicle.color, selected.driver.vehicle.plate].filter(Boolean).join(" · ")}</div> : null}
+                  {driverPhone ? <div className="mt-3 flex gap-2"><a href={`tel:${driverPhone}`} className="rounded-full bg-slate-900 px-3 py-2 text-[11px] font-black text-white">Llamar</a><a href={`https://wa.me/${driverPhone.length === 10 ? `57${driverPhone}` : driverPhone}`} target="_blank" rel="noreferrer" className="rounded-full bg-emerald-500 px-3 py-2 text-[11px] font-black text-white">WhatsApp</a></div> : null}
+                </div>
+
+                <div className="mt-4 grid gap-2">
+                  {[
+                    ["Solicitud creada", selected.createdAt, true],
+                    ["Domiciliario asignado", selected.assignedAt, Boolean(selected.assignedAt)],
+                    ["En ruta / actualización", selected.updatedAt, String(selected.status ?? "").toUpperCase() === "EN_ROUTE" || String(selected.flowStatus ?? "").toUpperCase() === "EN_ROUTE" || Boolean(selected.deliveredAt)],
+                    ["Entregado", selected.deliveredAt, Boolean(selected.deliveredAt)],
+                    ["Cancelado", selected.cancelledAt, Boolean(selected.cancelledAt)],
+                  ].map(([label, date, done]) => done ? <div key={String(label)} className="flex items-center gap-3 rounded-[13px] bg-slate-50 px-3 py-3 ring-1 ring-slate-100"><div className="grid h-7 w-7 place-items-center rounded-full bg-emerald-100 text-[12px] font-black text-emerald-700">✓</div><div><div className="text-[12px] font-black text-slate-800">{label}</div><div className="text-[10px] font-semibold text-slate-500">{fmtDateTime(date as string | null)}</div></div></div> : null)}
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-2 text-[11px]">
+                  <div className="rounded-[13px] bg-slate-50 p-3 ring-1 ring-slate-200"><div className="font-bold text-slate-400">Comisión KroniX</div><div className="mt-1 text-[15px] font-black text-slate-900">{formatCOP(Number(selected.workerCommissionCOP ?? 0))}</div></div>
+                  <div className="rounded-[13px] bg-slate-50 p-3 ring-1 ring-slate-200"><div className="font-bold text-slate-400">Estado comisión</div><div className="mt-1 text-[12px] font-black text-slate-900">{selected.workerCommissionDebitedAt ? "Descontada al trabajador" : "Pendiente hasta finalizar"}</div></div>
+                </div>
+              </div>;
+            })()}
           </div>
         </div>
       </div>
@@ -1018,6 +1176,13 @@ export default function OrdersTab({
     setRightPanelMode("KRONIX_ENVIOS");
   }
 
+  function openKronixEnviosHistory() {
+    previousStageRef.current = activeStage;
+    markManualInteraction();
+    setSelectedOrderId(null);
+    setRightPanelMode("KRONIX_ENVIOS_HISTORY");
+  }
+
   async function handleKronixEnviosCreated() {
     const previous = previousStageRef.current ?? resolvePreferredStage();
     setRightPanelMode("EMPTY");
@@ -1056,6 +1221,18 @@ export default function OrdersTab({
               active={rightPanelMode === "KRONIX_ENVIOS"}
               onClick={openKronixEnvios}
             />
+            <button
+              type="button"
+              onClick={openKronixEnviosHistory}
+              className={[
+                "h-9 rounded-full px-4 text-[11px] font-black ring-1 transition",
+                rightPanelMode === "KRONIX_ENVIOS_HISTORY"
+                  ? "bg-emerald-600 text-white ring-emerald-600"
+                  : "bg-white text-emerald-700 ring-emerald-200 hover:bg-emerald-50",
+              ].join(" ")}
+            >
+              Seguimiento / historial
+            </button>
             <SmallChip tone="softSlate">{loading ? "Actualizando…" : `${ordersList.length} visibles`}</SmallChip>
           </div>
 
@@ -1082,7 +1259,7 @@ export default function OrdersTab({
           </div>
 
           <div className="mt-3 rounded-[14px] border border-slate-200 bg-white/85 px-3 py-3 text-[11px] font-medium leading-snug text-slate-500">
-            Usa este panel para cambiar de etapa, operar la tienda y solicitar KroniX Envíos sin salir del tablero.
+            Usa este panel para cambiar de etapa, operar la tienda y solicitar Domicilio Express sin salir del tablero.
           </div>
         </div>
       </aside>
@@ -1138,10 +1315,18 @@ export default function OrdersTab({
             onCreated={handleKronixEnviosCreated}
             onCancel={closeKronixEnvios}
           />
+        ) : rightPanelMode === "KRONIX_ENVIOS_HISTORY" ? (
+          <KronixEnviosHistoryPanel
+            storeFetch={storeFetch}
+            onBack={closeKronixEnvios}
+          />
         ) : !selectedOrderId || !selectedOrder ? (
           <EmptySelection />
         ) : (
           <div className="h-full min-h-0 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {selectedOrder.sourceType === "LUNCH_ORDER" ? (
+              <LunchOrderDetail order={selectedOrder} storeFetch={storeFetch} onRefresh={onRefresh} />
+            ) : (
             <OrderDetail
               order={selectedOrder}
               storeCode={storeCode}
@@ -1155,12 +1340,10 @@ export default function OrdersTab({
               onPreparing={onPreparing}
               printing={printingId === selectedOrder.id}
             />
+            )}
           </div>
         )}
       </aside>
     </div>
   );
 }
-
-
-

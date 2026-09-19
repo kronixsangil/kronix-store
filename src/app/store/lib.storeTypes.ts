@@ -1,4 +1,5 @@
 // app/store/lib/storeTypes.ts
+// app/store/lib/storeTypes.ts
 export type ApiOrderStatus = "AVAILABLE" | "ASSIGNED" | "EN_ROUTE" | "DELIVERED" | "CANCELLED";
 
 export type ApiOrderFlowStatus =
@@ -28,11 +29,6 @@ export type ApiFinancialSnapshot = {
 
 export type ApiOrder = {
   id: string;
-  sourceType?: "STORE_ORDER" | "LUNCH_ORDER";
-  lunchStatus?: "PENDING_PAYMENT_REVIEW" | "CONFIRMED" | "PREPARING" | "READY" | "COMPLETED" | "REJECTED" | string | null;
-  fulfillment?: "PICKUP" | "DELIVERY" | string | null;
-  deliveryReference?: string | null;
-  lunchPaymentMethod?: string | null;
   status: ApiOrderStatus;
   flowStatus?: ApiOrderFlowStatus | string | null;
   paymentStatus?: string | null;
@@ -42,7 +38,6 @@ export type ApiOrder = {
   updatedAt: string;
   dropoffAddress: string;
   customerNote?: string | null;
-  customer?: { id?: string | null; name?: string | null; phone?: string | null } | null;
   totalCOP?: number | null;
   deliveryFeeCOP?: number | null;
   tipCOP?: number | null;
@@ -243,7 +238,7 @@ export type StoreProductUpsertInput = {
   sortOrder?: number;
 };
 
-export type TabKey = "ORDERS" | "LUNCH" | "PRODUCTS" | "EARNINGS" | "SETTINGS" | "REGISTER" | "PROFILE";
+export type TabKey = "ORDERS" | "PRODUCTS" | "EARNINGS" | "SETTINGS" | "REGISTER" | "PROFILE";
 export type StoreStateUI = "ACTIVE" | "PAUSED" | "INACTIVE";
 
 export const PLATFORM_COMMISSION_RATE = 0.08;
