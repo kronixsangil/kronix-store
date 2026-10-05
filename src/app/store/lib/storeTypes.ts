@@ -29,6 +29,8 @@ export type ApiFinancialSnapshot = {
 export type ApiOrder = {
   id: string;
   sourceType?: "STORE_ORDER" | "LUNCH_ORDER";
+  lunchChannel?: "KRONIX_APP" | "PUBLIC_LINK" | "DINE_IN" | string | null;
+  lunchLocationLabel?: string | null;
   lunchStatus?: "PENDING_PAYMENT_REVIEW" | "CONFIRMED" | "PREPARING" | "READY" | "COMPLETED" | "REJECTED" | string | null;
   fulfillment?: "PICKUP" | "DELIVERY" | string | null;
   deliveryReference?: string | null;

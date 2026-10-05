@@ -47,6 +47,11 @@ function shouldNotifyReadyForPickup(order: ApiOrder | null | undefined) {
 function resolveStoreVisibleStage(order: ApiOrder, storeCode: string): StoreVisibleStage {
   if (order.sourceType === "LUNCH_ORDER") {
     const lunchStatus = String(order.lunchStatus ?? "").toUpperCase();
+    if (order.lunchChannel === "DINE_IN") {
+      if (lunchStatus === "CONFIRMED") return "PENDING";
+      if (lunchStatus === "PREPARING") return "PREPARING";
+      return "HIDDEN";
+    }
     if (lunchStatus === "PENDING_PAYMENT_REVIEW") return "PENDING";
     if (lunchStatus === "CONFIRMED" || lunchStatus === "PREPARING") return "PREPARING";
     if (lunchStatus === "READY") return "PREPARING";
@@ -110,12 +115,14 @@ function adaptLunchOrder(row: any, storeCode: string): ApiOrder {
     id: String(row?.id ?? ""),
     sourceType: "LUNCH_ORDER",
     lunchStatus,
+    lunchChannel: String(row?.channel ?? "KRONIX_APP"),
+    lunchLocationLabel: row?.locationLabel ?? null,
     fulfillment: String(row?.fulfillment ?? "DELIVERY").toUpperCase(),
     deliveryReference: row?.deliveryReference ?? null,
     lunchPaymentMethod: row?.paymentMethod ?? null,
     status: rejected ? "CANCELLED" : completed ? "DELIVERED" : courierEnRoute ? "EN_ROUTE" : "AVAILABLE",
     flowStatus: rejected ? "CANCELLED" : completed ? "DELIVERED" : courierEnRoute ? "EN_ROUTE" : ready ? "PREPARING" : lunchStatus === "PREPARING" ? "PREPARING" : confirmed ? "STORE_CONFIRMED" : "WAITING_CONFIRMATION",
-    paymentStatus: confirmed ? "PAID" : "PENDING",
+    paymentStatus: row?.channel === "DINE_IN" ? "PENDING" : confirmed ? "PAID" : "PENDING",
     paymentReference: row?.paymentReference ?? null,
     paidAt: row?.paymentVerifiedAt ?? null,
     createdAt: String(row?.createdAt ?? new Date().toISOString()),
@@ -134,7 +141,7 @@ function adaptLunchOrder(row: any, storeCode: string): ApiOrder {
       store: { id: String(row?.storeId ?? ""), storeCode, name: String(row?.store?.name ?? "Restaurante") },
     }],
     items,
-    ...(row?.customer ? { customer: row.customer } : {}),
+    ...(row?.customer ? { customer: {...row.customer, name: row?.channel === "DINE_IN" ? `${row?.locationLabel ?? "Mesa"} · ${row.customer.name ?? "Invitado"}` : row?.channel === "PUBLIC_LINK" ? `Enlace público · ${row.customer.name ?? "Cliente"}` : row.customer.name} } : {}),
   } as ApiOrder;
 }
 
