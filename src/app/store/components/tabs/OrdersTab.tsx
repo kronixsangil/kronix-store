@@ -12,7 +12,7 @@ import {
   type SetStateAction,
 } from "react";
 import OrderDetail from "../OrderDetail";
-import LunchOrderDetail from "../LunchOrderDetail";
+import CommerceOrderDetail from "../CommerceOrderDetail";
 import SmallChip from "../ui/SmallChip";
 import StatePill from "../ui/StatePill";
 import { useStoreCity } from "../context/StoreCityContext";
@@ -94,9 +94,6 @@ type StoreMeResponse = {
   cel1?: string | null;
   cel2?: string | null;
   businessEmail?: string | null;
-  ownerName?: string | null;
-  ownerPhone?: string | null;
-  ownerEmail?: string | null;
   category?: string | null;
   city?: {
     id?: string | null;
@@ -537,13 +534,11 @@ function KronixEnviosPanel({
   const pickupReference = String(storeMe?.addressReference ?? "").trim();
   const storeName = String(storeMe?.name ?? "").trim() || "Tienda KroniX";
   const contactName =
-    String(storeMe?.ownerName ?? "").trim() ||
     String(authMe?.user?.name ?? "").trim() ||
     storeName;
   const contactPhone = cleanPhone(
     storeMe?.cel1 ||
       storeMe?.cel2 ||
-      storeMe?.ownerPhone ||
       authMe?.user?.phone ||
       ""
   );
@@ -1324,8 +1319,8 @@ export default function OrdersTab({
           <EmptySelection />
         ) : (
           <div className="h-full min-h-0 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {selectedOrder.sourceType === "LUNCH_ORDER" ? (
-              <LunchOrderDetail order={selectedOrder} storeFetch={storeFetch} onRefresh={onRefresh} />
+            {selectedOrder.sourceType === "COMMERCE_ORDER" ? (
+              <CommerceOrderDetail order={selectedOrder} storeFetch={storeFetch} onRefresh={onRefresh} />
             ) : (
             <OrderDetail
               order={selectedOrder}

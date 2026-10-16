@@ -107,7 +107,7 @@ export function useStoreAuth() {
     setMustChangePassword(false);
   }, []);
 
-  async function logoutWithoutPause() {
+  async function clearSession() {
     try {
       await fetch(apiUrl("/auth/logout"), {
         method: "POST",
@@ -144,7 +144,7 @@ export function useStoreAuth() {
       setMustChangePassword(Boolean(user?.mustChangePassword));
 
       if (role !== "STORE" || !storeId) {
-        await logoutWithoutPause();
+        await clearSession();
         setAccessDeniedMessage(getStoreWrongRoleMessage(role));
         return false;
       }
@@ -452,21 +452,6 @@ export function useStoreAuth() {
 
   async function doLogout() {
     try {
-      if (accessToken?.trim()) {
-        try {
-          await storeFetch(`/stores/me/state`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              state: "PAUSED",
-              pausedReason: "Tienda en pausa por cierre de sesión",
-            }),
-          });
-        } catch (pauseErr) {
-          console.error("No se pudo pausar la tienda antes del logout:", pauseErr);
-        }
-      }
-
       await fetch(apiUrl("/auth/logout"), {
         method: "POST",
         headers: { "x-ct-app": "store" },
@@ -529,7 +514,7 @@ export function useStoreAuth() {
 
     isUnauthorizedErrMessage,
     clearLocalStoreSession,
-    logoutWithoutPause,
+    clearSession,
     verifyStoreRole,
     refreshStoreSession,
     storeFetch,

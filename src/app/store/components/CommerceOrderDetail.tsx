@@ -1,8 +1,9 @@
-//src\app\store\components\LunchOrderDetail.tsx
+//src\app\store\components\CommerceOrderDetail.tsx
 "use client";
 
 import React, { useState } from "react";
 import { ApiOrder } from "../lib/storeTypes";
+import CommercePaymentReceipt from "./CommercePaymentReceipt";
 import { formatCOP } from "../lib/storeUtils";
 
 type StoreFetchFn = <T>(path: string, init?: RequestInit, retry?: boolean) => Promise<T>;
@@ -16,11 +17,12 @@ const LABELS: Record<string,string> = {
   REJECTED: "Rechazado",
 };
 
-export default function LunchOrderDetail({ order, storeFetch, onRefresh }:{ order: ApiOrder; storeFetch?: StoreFetchFn; onRefresh:()=>void|Promise<void> }) {
+export default function CommerceOrderDetail({ order, storeFetch, onRefresh }:{ order: ApiOrder; storeFetch?: StoreFetchFn; onRefresh:()=>void|Promise<void> }) {
   const [busy,setBusy]=useState(false);
   const [err,setErr]=useState("");
-  const dineIn=order.lunchChannel==="DINE_IN";
-  const status=String(order.lunchStatus??"PENDING_PAYMENT_REVIEW").toUpperCase();
+  const dineIn=order.commerceChannel==="DINE_IN";
+  const direct=order.commercePaymentMethod==="DIRECT_TO_ESTABLISHMENT";
+  const status=String(order.commerceStatus??"PENDING_PAYMENT_REVIEW").toUpperCase();
   const items=Array.isArray(order.items)?order.items:[];
   const total=items.reduce((s,x)=>s+Number(x.qty||0)*Number(x.priceCOP||0),0);
   const customerName=String(order.customer?.name??"Cliente").trim()||"Cliente";
@@ -33,7 +35,7 @@ export default function LunchOrderDetail({ order, storeFetch, onRefresh }:{ orde
     if(!storeFetch||busy)return;
     setBusy(true);setErr("");
     try{
-      await storeFetch(`/lunch/store/orders/${order.id}/status`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:next})});
+      await storeFetch(`/commerce/store/orders/${order.id}/status`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:next})});
       await onRefresh();
     }catch(e:any){setErr(String(e?.message??"No se pudo actualizar el pedido"));}
     finally{setBusy(false);}
@@ -41,24 +43,26 @@ export default function LunchOrderDetail({ order, storeFetch, onRefresh }:{ orde
 
   return <div className="flex min-h-full flex-col rounded-[18px] bg-white p-4">
     <div className="rounded-[18px] bg-gradient-to-br from-violet-950 to-violet-700 p-4 text-white">
-      <div className="text-[11px] font-black uppercase tracking-[.18em] text-violet-200">{dineIn?"🍽️ Pedido en mesa":order.lunchChannel==="PUBLIC_LINK"?"🍽️ Enlace público":"🍽️ Pide un Almuerzo"}</div>
+      <div className="text-[11px] font-black uppercase tracking-[.18em] text-violet-200">{dineIn?"🍽️ Pedido en mesa":order.commerceChannel==="PUBLIC_LINK"?"🍽️ Enlace público":"🍽️ Customer App"}</div>
       <div className="mt-1 text-[22px] font-black">Pedido ...{order.id.slice(-6)}</div>
-      <div className="mt-3 inline-flex rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-extrabold">{dineIn&&status==="CONFIRMED"?"Pedido recibido":LABELS[status]??status}</div>
+      <div className="mt-3 inline-flex rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-extrabold">{(dineIn||direct)&&status==="CONFIRMED"?"Pedido recibido":LABELS[status]??status}</div>
     </div>
 
     <div className="mt-3 grid gap-2 text-[13px] sm:grid-cols-2">
       <Info label="Cliente" value={customerName}/>
       <Info label="Teléfono del cliente" value={customerPhone||"—"}/>
       <Info label="Modalidad" value={dineIn?"Consumo en restaurante":String(order.fulfillment).toUpperCase()==="PICKUP"?"Paso a recoger":"A domicilio"}/>
-      {dineIn?<Info label="Mesa / ubicación" value={order.lunchLocationLabel||"—"}/>:null}
+      {dineIn?<Info label="Mesa / ubicación" value={order.commerceLocationLabel||"—"}/>:null}
       {!dineIn?<Info label="Referencia de pago" value={order.paymentReference||"—"}/>:null}
       {!dineIn?<Info label="Dirección" value={order.dropoffAddress||"—"}/>:null}
       <Info label="Referencia" value={order.deliveryReference||"—"}/>
-      <Info label="Método de pago" value={dineIn?"Se cobra en el restaurante":order.lunchPaymentMethod||"—"}/>
+      <Info label="Método de pago" value={dineIn||direct?"Pago directo al negocio":order.commercePaymentMethod||"—"}/>
       <Info label="Nota" value={order.customerNote||"Sin nota"}/>
     </div>
 
-    {customerPhone?<div className="mt-3 flex gap-2"><a href={`tel:${customerPhone}`} className="flex-1 rounded-[14px] bg-slate-900 px-4 py-3 text-center text-[13px] font-black text-white">📞 Llamar cliente</a><a href={`https://wa.me/${whatsappDigits}?text=${encodeURIComponent(`Hola ${customerName}, te contactamos de ${order.pickups?.[0]?.store?.name||"el restaurante"} por tu pedido de almuerzo KroniX.`)}`} target="_blank" rel="noreferrer" className="flex-1 rounded-[14px] bg-emerald-600 px-4 py-3 text-center text-[13px] font-black text-white">WhatsApp</a></div>:null}
+    {!dineIn && order.paymentReceiptId ? <CommercePaymentReceipt key={order.id} orderId={order.id} storeFetch={storeFetch}/> : null}
+
+    {customerPhone?<div className="mt-3 flex gap-2"><a href={`tel:${customerPhone}`} className="flex-1 rounded-[14px] bg-slate-900 px-4 py-3 text-center text-[13px] font-black text-white">📞 Llamar cliente</a><a href={`https://wa.me/${whatsappDigits}?text=${encodeURIComponent(`Hola ${customerName}, te contactamos de ${order.pickups?.[0]?.store?.name||"el restaurante"} por tu pedido en KroniX.`)}`} target="_blank" rel="noreferrer" className="flex-1 rounded-[14px] bg-emerald-600 px-4 py-3 text-center text-[13px] font-black text-white">WhatsApp</a></div>:null}
 
     <div className="mt-3 rounded-[16px] border border-slate-200 p-3">
       <div className="mb-2 text-[14px] font-black text-slate-900">Detalle del pedido</div>
@@ -79,7 +83,7 @@ export default function LunchOrderDetail({ order, storeFetch, onRefresh }:{ orde
       {!dineIn&&status==="PREPARING"?<Action disabled={busy} onClick={()=>change("READY")} cls="bg-amber-500">✅ Marcar listo</Action>:null}
       {status==="READY"&&String(order.fulfillment).toUpperCase()==="PICKUP"?<Action disabled={busy} onClick={()=>change("COMPLETED")} cls="bg-emerald-700">🏁 Entregado al cliente</Action>:null}
       {status==="READY"&&String(order.fulfillment).toUpperCase()==="DELIVERY"?<span className="self-center rounded-xl bg-amber-50 px-3 py-2 text-[12px] font-bold text-amber-800">🛵 Listo · esperando domiciliario</span>:null}
-      {dineIn&&status==="CONFIRMED"?<Action disabled={busy} onClick={()=>change("REJECTED")} cls="bg-red-600">Rechazar pedido</Action>:null}
+      {(dineIn||direct)&&status==="CONFIRMED"?<Action disabled={busy} onClick={()=>change("REJECTED")} cls="bg-red-600">Rechazar pedido</Action>:null}
       {dineIn&&status==="PREPARING"?<span className="rounded-xl bg-blue-50 px-3 py-2 text-sm font-bold text-blue-800">Pedido en preparación. Fin del seguimiento digital; pago en el restaurante.</span>:null}
       {busy?<span className="self-center text-[12px] font-bold text-slate-500">Actualizando…</span>:null}
     </div>

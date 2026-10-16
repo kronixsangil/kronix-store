@@ -43,11 +43,10 @@ type HeaderTabConfig = {
 
 const HEADER_TABS: HeaderTabConfig[] = [
   { key: "ORDERS", label: "Órdenes", image: "/branding/kronix/settings-orders.png" },
-  { key: "LUNCH", label: "Almuerzos", image: "/branding/kronix/settings-lunch.png" },
   { key: "PRODUCTS", label: "Productos", image: "/branding/kronix/settings-products.png" },
   { key: "EARNINGS", label: "Ganancias", image: "/branding/kronix/settings-earnings.png" },
   { key: "SETTINGS", label: "Config.", image: "/branding/kronix/settings-gear.png" },
-  { key: "REGISTER", label: "Registro", image: "/branding/kronix/settings-register.png" },
+  { key: "REGISTER", label: "Negocio", image: "/branding/kronix/settings-register.png" },
   { key: "PROFILE", label: "Perfil", image: "/branding/kronix/settings-profile.png" },
 ];
 

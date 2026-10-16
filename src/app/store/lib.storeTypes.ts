@@ -106,10 +106,6 @@ export type StoreMe = {
   cityId?: string | null;
   storeCode: string;
   name: string;
-
-  legalName?: string | null;
-  nit?: string | null;
-  businessEmail?: string | null;
   category?: string | null;
   description?: string | null;
   cel1?: string | null;
@@ -134,27 +130,6 @@ export type StoreMe = {
   coverImage?: string | null;
   primaryColor?: string | null;
   secondaryColor?: string | null;
-
-  onboardingStep?: number | null;
-  onboardingCompleted?: boolean | null;
-
-  ownerName?: string | null;
-  ownerDocument?: string | null;
-  ownerPhone?: string | null;
-  ownerEmail?: string | null;
-  storeType?: string | null;
-  affiliateStatus?: StoreAffiliateStatus | string | null;
-  visitedAt?: string | null;
-  visitedBy?: string | null;
-  physicalDocumentsReceived?: boolean | null;
-  documentsReviewed?: boolean | null;
-  documentsApproved?: boolean | null;
-  contractSigned?: boolean | null;
-  approvedAt?: string | null;
-  approvedBy?: string | null;
-  approvalNotes?: string | null;
-  onboardingNotes?: string | null;
-  rejectedReason?: string | null;
 
   storePayoutMethod?: StorePayoutMethod | string | null;
   storePayoutBankName?: string | null;

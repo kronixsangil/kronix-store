@@ -28,17 +28,19 @@ export type ApiFinancialSnapshot = {
 
 export type ApiOrder = {
   id: string;
-  sourceType?: "STORE_ORDER" | "LUNCH_ORDER";
-  lunchChannel?: "KRONIX_APP" | "PUBLIC_LINK" | "DINE_IN" | string | null;
-  lunchLocationLabel?: string | null;
-  lunchStatus?: "PENDING_PAYMENT_REVIEW" | "CONFIRMED" | "PREPARING" | "READY" | "COMPLETED" | "REJECTED" | string | null;
+  sourceType?: "STORE_ORDER" | "COMMERCE_ORDER";
+  commerceChannel?: "KRONIX_APP" | "PUBLIC_LINK" | "DINE_IN" | string | null;
+  commerceLocationLabel?: string | null;
+  commerceStatus?: "PENDING_PAYMENT_REVIEW" | "CONFIRMED" | "PREPARING" | "READY" | "COMPLETED" | "REJECTED" | string | null;
   fulfillment?: "PICKUP" | "DELIVERY" | string | null;
   deliveryReference?: string | null;
-  lunchPaymentMethod?: string | null;
+  commercePaymentMethod?: string | null;
   status: ApiOrderStatus;
   flowStatus?: ApiOrderFlowStatus | string | null;
   paymentStatus?: string | null;
   paymentReference?: string | null;
+  paymentReceiptId?: string | null;
+  paymentAccountSnapshot?: {kind?: string;destination?: string} | null;
   paidAt?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -113,10 +115,6 @@ export type StoreMe = {
   cityId?: string | null;
   storeCode: string;
   name: string;
-
-  legalName?: string | null;
-  nit?: string | null;
-  businessEmail?: string | null;
   category?: string | null;
   description?: string | null;
   cel1?: string | null;
@@ -141,27 +139,6 @@ export type StoreMe = {
   coverImage?: string | null;
   primaryColor?: string | null;
   secondaryColor?: string | null;
-
-  onboardingStep?: number | null;
-  onboardingCompleted?: boolean | null;
-
-  ownerName?: string | null;
-  ownerDocument?: string | null;
-  ownerPhone?: string | null;
-  ownerEmail?: string | null;
-  storeType?: string | null;
-  affiliateStatus?: StoreAffiliateStatus | string | null;
-  visitedAt?: string | null;
-  visitedBy?: string | null;
-  physicalDocumentsReceived?: boolean | null;
-  documentsReviewed?: boolean | null;
-  documentsApproved?: boolean | null;
-  contractSigned?: boolean | null;
-  approvedAt?: string | null;
-  approvedBy?: string | null;
-  approvalNotes?: string | null;
-  onboardingNotes?: string | null;
-  rejectedReason?: string | null;
 
   storePayoutMethod?: StorePayoutMethod | string | null;
   storePayoutBankName?: string | null;
@@ -245,7 +222,7 @@ export type StoreProductUpsertInput = {
   sortOrder?: number;
 };
 
-export type TabKey = "ORDERS" | "LUNCH" | "PRODUCTS" | "EARNINGS" | "SETTINGS" | "REGISTER" | "PROFILE";
+export type TabKey = "ORDERS" | "COMMERCE" | "PRODUCTS" | "EARNINGS" | "SETTINGS" | "REGISTER" | "PROFILE";
 export type StoreStateUI = "ACTIVE" | "PAUSED" | "INACTIVE";
 
 export const PLATFORM_COMMISSION_RATE = 0.08;
