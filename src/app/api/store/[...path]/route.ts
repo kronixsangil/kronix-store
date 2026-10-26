@@ -67,6 +67,12 @@ async function proxy(
   });
 
   const responseHeaders = buildProxyHeaders(res.headers);
+  if (path.join("/") === "events/stream" && res.ok) {
+    responseHeaders.set("Content-Type", "text/event-stream");
+    responseHeaders.set("Cache-Control", "no-cache, no-transform");
+    responseHeaders.set("X-Accel-Buffering", "no");
+    return new Response(res.body, {status: res.status, headers: responseHeaders});
+  }
   const responseBody = await res.arrayBuffer();
 
   return new Response(responseBody, {

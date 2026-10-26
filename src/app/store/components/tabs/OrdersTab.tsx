@@ -402,6 +402,10 @@ function OrderCard({
   storeCode,
   stage,
   attention,
+  actions,
+  busy,
+  blocked,
+  error,
 }: {
   order: ApiOrder;
   active: boolean;
@@ -409,11 +413,15 @@ function OrderCard({
   storeCode: string;
   stage: StageKey;
   attention: boolean;
+  actions: {label: string; color: string; run: () => void; disabled?: boolean}[];
+  busy: boolean;
+  blocked: boolean;
+  error?: string;
 }) {
   const myItems = getMyItems(order, storeCode);
   const mySubtotal = calcItemsSubtotalCOP(myItems);
   const tone = getStageTone(stage);
-  const stateLabel = order.sourceType === "COMMERCE_ORDER" ? (({ PENDING_PAYMENT_REVIEW: "PAGO POR VERIFICAR", CONFIRMED: "RECIBIDA", PREPARING: "PREPARANDO", READY: "LISTA", COMPLETED: "ENTREGADA" } as Record<string, string>)[String(order.commerceStatus)] || getStateLabel(order, storeCode)) : getStateLabel(order, storeCode);
+  const stateLabel = stage === "DELIVERED" ? "ENTREGADA" : (order as any).storeSentAt || normStatus(order.status) === "EN_ROUTE" ? "ENVIADA" : order.sourceType === "COMMERCE_ORDER" ? (({ PENDING_PAYMENT_REVIEW: "PAGO POR VERIFICAR", CONFIRMED: "RECIBIDA", PREPARING: "PREPARANDO", READY: "LISTA", COMPLETED: "ENTREGADA" } as Record<string, string>)[String(order.commerceStatus)] || getStateLabel(order, storeCode)) : getStateLabel(order, storeCode);
   const cardColor = stage === "PENDING" ? "#ffedd5" : stage === "PREPARING" ? "#e0f2fe" : stage === "EN_ROUTE" ? "#dcfce7" : "#e2e8f0";
 
   const customerName =
@@ -424,9 +432,7 @@ function OrderCard({
   const totalUnits = myItems.reduce((acc, item) => acc + Math.max(0, Math.round(Number(item.qty || 0))), 0);
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <article
       style={{ backgroundColor: cardColor }}
       className={[
         "w-full shrink-0 rounded-[14px] border border-white/70 px-3 py-2 text-left shadow-sm transition",
@@ -436,6 +442,7 @@ function OrderCard({
           : "hover:-translate-y-[1px] hover:shadow-[0_10px_20px_rgba(15,23,42,0.06)]",
       ].join(" ")}
     >
+      <button type="button" onClick={onClick} aria-label={`Ver detalle del pedido ${formatShortOrderId(order.id)}`} className="block w-full text-left">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="truncate text-[12px] font-black text-slate-500">{customerName}</div>
@@ -456,16 +463,16 @@ function OrderCard({
         </div>
       </div>
 
-      <div className="mt-1 flex flex-wrap items-center gap-1.5">
-        <span className={`rounded-full px-3 py-1 text-[10px] font-extrabold ${tone.subtle}`}>
-          {myItems.length} ítems
+      </button>
+      <div className="mt-1 flex flex-wrap items-center justify-between gap-1.5">
+        <span className="flex items-center gap-1">
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${tone.subtle}`}>{myItems.length} ítems</span>
+          <span className="rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-extrabold text-slate-700">{totalUnits} artículos</span>
         </span>
-        <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-extrabold text-slate-700">
-          {totalUnits} artículos
-        </span>
-        <span className="ml-auto rounded-full bg-slate-900 px-3 py-1 text-[11px] font-bold text-white">Ver pedido →</span>
+        {actions.length > 0 ? <span className="ml-auto flex flex-wrap justify-end gap-1.5">{actions.map((action) => <button key={action.label} type="button" disabled={blocked || action.disabled} onClick={action.run} className={`min-h-8 rounded-full px-3 py-1 text-[12px] font-black text-white disabled:opacity-50 ${action.color}`}>{busy ? "Guardando…" : action.label}</button>)}</span> : null}
       </div>
-    </button>
+      {error ? <p role="alert" className="mt-1 text-[12px] font-bold text-red-800">{error}</p> : null}
+    </article>
   );
 }
 
@@ -1070,6 +1077,55 @@ export default function OrdersTab({
   const deliveredOrders = buckets.delivered ?? [];
 
   const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("EMPTY");
+  const [actionId, setActionId] = useState<string | null>(null);
+  const actionLock = useRef(false);
+  const [actionErrors, setActionErrors] = useState<Record<string, string>>({});
+  const listRef = useRef<HTMLDivElement>(null);
+  const lastPendingRef = useRef(new Set<string>());
+  useEffect(() => {
+    const ids = new Set(pendingOrders.map((order) => order.id));
+    if (pendingOrders.some((order) => !lastPendingRef.current.has(order.id))) listRef.current?.scrollTo({top: 0, behavior: "smooth"});
+    lastPendingRef.current = ids;
+  }, [pendingOrders]);
+
+  async function advance(order: ApiOrder, next: string) {
+    if (actionLock.current || busyId) return;
+    actionLock.current = true;
+    setActionId(order.id);
+    setActionErrors((previous) => ({ ...previous, [order.id]: "" }));
+    try {
+      if (order.sourceType === "COMMERCE_ORDER") {
+        if (!storeFetch) throw new Error("No hay conexión para actualizar el pedido.");
+        const sent = next === "SENT";
+        await storeFetch(`/commerce/store/orders/${order.id}/${sent ? "sent" : "status"}`, {
+          method: sent ? "POST" : "PATCH", headers: {"Content-Type": "application/json"},
+          ...(sent ? {} : {body: JSON.stringify({status: next})}),
+        });
+        await onRefresh();
+      } else if (next === "CONFIRMED") await onConfirm(order.id);
+      else if (next === "PREPARING" || next === "READY") await onPreparing(order.id);
+    } catch (error) {
+      setActionErrors((previous) => ({...previous, [order.id]: error instanceof Error ? error.message : "No se pudo actualizar el pedido."}));
+    } finally { actionLock.current = false; setActionId(null); }
+  }
+
+  function cardActions(order: ApiOrder, stage: StageKey) {
+    const action = (label: string, color: string, next: string) => ({ label, color, run: () => { void advance(order, next); } });
+    if (stage === "DELIVERED") return [];
+    if (order.sourceType !== "COMMERCE_ORDER") {
+      if (stage === "PENDING") return [action("Confirmar", "bg-emerald-700", "CONFIRMED")];
+      if (stage === "PREPARING") return [action("En preparación / Listo", "bg-blue-700", "PREPARING")];
+      return [];
+    }
+    const status = String(order.commerceStatus || "");
+    if (status === "PENDING_PAYMENT_REVIEW") return [action("Confirmar", "bg-emerald-700", "CONFIRMED")];
+    if (status === "CONFIRMED") return [action("En preparación", "bg-blue-700", "PREPARING"), ...(order.commerceChannel !== "DINE_IN" ? [action("Listo", "bg-emerald-700", "READY")] : [])];
+    if (status === "PREPARING" && order.commerceChannel !== "DINE_IN") return [{...action("En preparación", "bg-blue-700", "PREPARING"), disabled: true}, action("Listo", "bg-emerald-700", "READY")];
+    if (status === "READY" && String(order.fulfillment).toUpperCase() === "PICKUP") return [action("Entregado", "bg-slate-950", "COMPLETED")];
+    if (status === "READY" && !(order as any).storeSentAt && normStatus(order.status) !== "EN_ROUTE") return [action("Enviado", "bg-slate-950", "SENT")];
+    return [];
+  }
+
   const [attentionIds, setAttentionIds] = useState<string[]>([]);
   const acknowledgedRef = useRef(new Set<string>());
   const pendingKey = [...pendingOrders, ...preparingOrders.filter((o) => o.sourceType === "COMMERCE_ORDER" && o.commerceStatus === "CONFIRMED")].map((o) => o.id).sort().join(",");
@@ -1217,7 +1273,7 @@ export default function OrdersTab({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-3 pr-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto p-3 pr-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="flex flex-col gap-2">
             {loading ? (
               <div className="rounded-[16px] border border-dashed border-slate-200 bg-white/75 px-6 py-10 text-center">
@@ -1238,6 +1294,10 @@ export default function OrdersTab({
                   storeCode={storeCode}
                   stage={stage}
                   attention={attentionIds.includes(order.id)}
+                  actions={cardActions(order, stage)}
+                  busy={actionId === order.id || busyId === order.id}
+                  blocked={!!actionId || !!busyId}
+                  error={actionErrors[order.id]}
                 />
               ))
             )}

@@ -1,7 +1,7 @@
 //src\app\store\hooks\useStoreOrders.ts
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ApiOrder,
   REJECT_REASONS,
@@ -47,6 +47,9 @@ function shouldNotifyReadyForPickup(order: ApiOrder | null | undefined) {
 function resolveStoreVisibleStage(order: ApiOrder, storeCode: string): StoreVisibleStage {
   if (order.sourceType === "COMMERCE_ORDER") {
     const commerceStatus = String(order.commerceStatus ?? "").toUpperCase();
+    if (normStatus(order.status) === "CANCELLED") return "HIDDEN";
+    if (normStatus(order.status) === "DELIVERED" || commerceStatus === "COMPLETED") return "DELIVERED";
+    if (normStatus(order.status) === "EN_ROUTE" || (order as any).storeSentAt || commerceStatus === "READY") return "EN_ROUTE";
     if (order.commerceChannel === "DINE_IN") {
       if (commerceStatus === "CONFIRMED") return "PENDING";
       if (commerceStatus === "PREPARING") return "PREPARING";
@@ -54,7 +57,6 @@ function resolveStoreVisibleStage(order: ApiOrder, storeCode: string): StoreVisi
     }
     if (commerceStatus === "PENDING_PAYMENT_REVIEW") return "PENDING";
     if (commerceStatus === "CONFIRMED" || commerceStatus === "PREPARING") return "PREPARING";
-    if (commerceStatus === "READY") return "PREPARING";
     if (commerceStatus === "COMPLETED") return "DELIVERED";
     return "HIDDEN";
   }
@@ -115,6 +117,7 @@ function adaptCommerceOrder(row: any, storeCode: string): ApiOrder {
     id: String(row?.id ?? ""),
     sourceType: "COMMERCE_ORDER",
     commerceStatus,
+    storeSentAt: row?.courier?.serviceSnapshot?.storeDispatch?.sentAt ?? null,
     commerceChannel: String(row?.channel ?? "KRONIX_APP"),
     commerceLocationLabel: row?.locationLabel ?? null,
     fulfillment: String(row?.fulfillment ?? "DELIVERY").toUpperCase(),
@@ -168,8 +171,23 @@ export function useStoreOrders({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [printingId] = useState<string | null>(null);
 
-  async function load() {
-    setLoading(true);
+  const inFlightRef = useRef<Promise<void> | null>(null);
+  const reloadRequestedRef = useRef(false);
+  const ordersRef = useRef(orders);
+  ordersRef.current = orders;
+
+  function load(): Promise<void> {
+    if (inFlightRef.current) { reloadRequestedRef.current = true; return inFlightRef.current; }
+    const pending = loadOnce().finally(() => {
+      inFlightRef.current = null;
+      if (reloadRequestedRef.current) { reloadRequestedRef.current = false; void load(); }
+    });
+    inFlightRef.current = pending;
+    return pending;
+  }
+
+  async function loadOnce() {
+    if (!ordersRef.current.length) setLoading(true);
     setErr(null);
 
     try {
@@ -185,7 +203,7 @@ export function useStoreOrders({
       const regular = regularResult.status === "fulfilled" && Array.isArray(regularResult.value) ? regularResult.value : [];
       const commerceRaw = commerceResult.status === "fulfilled" && Array.isArray(commerceResult.value) ? commerceResult.value : [];
       const commerce = commerceRaw.map((row) => adaptCommerceOrder(row, storeCode));
-      const normalized = [...regular, ...commerce];
+      const normalized = [...(regularResult.status === "fulfilled" ? regular : ordersRef.current.filter((o) => o.sourceType !== "COMMERCE_ORDER")), ...(commerceResult.status === "fulfilled" ? commerce : ordersRef.current.filter((o) => o.sourceType === "COMMERCE_ORDER"))];
       normalized.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
       setOrders(normalized);
 

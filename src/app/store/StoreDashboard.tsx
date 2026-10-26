@@ -466,6 +466,9 @@ export default function StoreDashboard() {
     return () => window.clearInterval(id);
   }, [auth.authChecked, auth.accessToken]);
 
+  const realtimeRef = useRef({ orders, settings, alerts });
+  realtimeRef.current = { orders, settings, alerts };
+
   useEffect(() => {
     if (!auth.authChecked) return;
     if (!auth.accessToken?.trim()) return;
@@ -481,7 +484,7 @@ export default function StoreDashboard() {
       ? `storeId=${encodeURIComponent(realStoreId)}`
       : `storeCode=${encodeURIComponent(realStoreCode)}`;
 
-    const url = `${API_BASE}/events/stream?${query}`;
+    const url = `/api/store/events/stream?${query}`;
     const es = new EventSource(url, { withCredentials: true });
 
     let refreshTimer: number | null = null;
@@ -489,8 +492,8 @@ export default function StoreDashboard() {
     function scheduleRefresh() {
       if (refreshTimer) window.clearTimeout(refreshTimer);
       refreshTimer = window.setTimeout(() => {
-        orders.load();
-        settings.loadStoreMe();
+        void realtimeRef.current.orders.load();
+        void realtimeRef.current.settings.loadStoreMe();
       }, 250);
     }
 
@@ -499,7 +502,7 @@ export default function StoreDashboard() {
       const driverPhone = String(payload?.driverPhone ?? "").trim() || null;
       const storeName =
         String(payload?.storeName ?? "").trim() ||
-        settings.storeName ||
+        realtimeRef.current.settings.storeName ||
         "tu tienda";
 
       persistDriverWaitingNotice({
@@ -519,13 +522,14 @@ export default function StoreDashboard() {
           payload?.updatedAt != null ? String(payload.updatedAt) : new Date().toISOString(),
       });
 
-      alerts.fireOperationalAlert(
+      realtimeRef.current.alerts.fireOperationalAlert(
         "🛵 Conductor en tienda",
         `${driverName} ya está esperando en tienda.`,
         "DRIVER_ARRIVED"
       );
     }
 
+    es.onopen = scheduleRefresh;
     es.onmessage = async (event) => {
       try {
         const raw = String(event?.data ?? "").trim();
@@ -537,7 +541,7 @@ export default function StoreDashboard() {
 
         if (!type || type === "ping") return;
 
-        if (type === "store.orders.changed") {
+        if (type === "store.orders.changed" || type.startsWith("commerce.") || type.startsWith("lunch.") || type === "order.created" || type === "store.order.created") {
           scheduleRefresh();
           return;
         }
@@ -555,21 +559,21 @@ export default function StoreDashboard() {
           const suffix = eventOrderId ? ` ${shortOrderId(eventOrderId)}` : "";
 
           if (status === "ASSIGNED") {
-            alerts.fireOperationalAlert(
+            realtimeRef.current.alerts.fireOperationalAlert(
               "🛵 Domiciliario asignado",
               `Ya hay un domiciliario asignado al servicio${suffix}.`,
               "DRIVER_ARRIVED"
             );
           } else if (status === "EN_ROUTE" || flowStatus === "EN_ROUTE") {
             clearDriverWaitingNotice(eventOrderId);
-            alerts.fireOperationalAlert(
+            realtimeRef.current.alerts.fireOperationalAlert(
               "🛣️ Domiciliario en ruta",
               `El pedido${suffix} ya salió hacia el cliente.`,
               "DRIVER_ARRIVED"
             );
           } else if (status === "DELIVERED" || flowStatus === "DELIVERED") {
             clearDriverWaitingNotice(eventOrderId);
-            alerts.fireOperationalAlert(
+            realtimeRef.current.alerts.fireOperationalAlert(
               "✅ Pedido entregado",
               `El pedido${suffix} fue entregado correctamente.`,
               "GENERIC"
@@ -589,6 +593,7 @@ export default function StoreDashboard() {
           const status = String(parsed?.payload?.status ?? "").toUpperCase();
           const eventOrderId = String(parsed?.orderId ?? parsed?.payload?.id ?? "").trim();
 
+          scheduleRefresh();
           if (payloadStoreIds.length > 0) {
             scheduleRefresh();
 
@@ -613,17 +618,29 @@ export default function StoreDashboard() {
     };
 
     es.onerror = () => {};
+    const poll = window.setInterval(() => {
+      if (document.visibilityState === "visible") void realtimeRef.current.orders.load();
+    }, 3000);
+    const refreshVisible = () => { if (document.visibilityState === "visible") scheduleRefresh(); };
+    window.addEventListener("focus", scheduleRefresh);
+    window.addEventListener("online", scheduleRefresh);
+    document.addEventListener("visibilitychange", refreshVisible);
+    const pushRefresh = () => scheduleRefresh();
+    navigator.serviceWorker?.addEventListener("message", pushRefresh);
 
     return () => {
       if (refreshTimer) window.clearTimeout(refreshTimer);
       es.close();
+      window.clearInterval(poll);
+      window.removeEventListener("focus", scheduleRefresh);
+      window.removeEventListener("online", scheduleRefresh);
+      document.removeEventListener("visibilitychange", refreshVisible);
+      navigator.serviceWorker?.removeEventListener("message", pushRefresh);
     };
   }, [
     auth.authChecked,
     auth.accessToken,
     auth.storeCode,
-    orders,
-    settings,
     settings.storeMe?.id,
   ]);
 
