@@ -401,17 +401,20 @@ function OrderCard({
   onClick,
   storeCode,
   stage,
+  attention,
 }: {
   order: ApiOrder;
   active: boolean;
   onClick: () => void;
   storeCode: string;
   stage: StageKey;
+  attention: boolean;
 }) {
   const myItems = getMyItems(order, storeCode);
   const mySubtotal = calcItemsSubtotalCOP(myItems);
   const tone = getStageTone(stage);
-  const stateLabel = getStateLabel(order, storeCode);
+  const stateLabel = order.sourceType === "COMMERCE_ORDER" ? (({ PENDING_PAYMENT_REVIEW: "PAGO POR VERIFICAR", CONFIRMED: "RECIBIDA", PREPARING: "PREPARANDO", READY: "LISTA", COMPLETED: "ENTREGADA" } as Record<string, string>)[String(order.commerceStatus)] || getStateLabel(order, storeCode)) : getStateLabel(order, storeCode);
+  const cardColor = stage === "PENDING" ? "#ffedd5" : stage === "PREPARING" ? "#e0f2fe" : stage === "EN_ROUTE" ? "#dcfce7" : "#e2e8f0";
 
   const customerName =
     String((order as any)?.customerName ?? "").trim() ||
@@ -424,8 +427,10 @@ function OrderCard({
     <button
       type="button"
       onClick={onClick}
+      style={{ backgroundColor: cardColor }}
       className={[
-        "w-full rounded-[16px] border border-white/70 bg-white/95 p-3.5 text-left shadow-[0_8px_18px_rgba(15,23,42,0.045)] transition",
+        "w-full shrink-0 rounded-[14px] border border-white/70 px-3 py-2 text-left shadow-sm transition",
+        attention ? "store-new-order" : "",
         active
           ? "border-slate-300 ring-2 ring-slate-200 shadow-[0_10px_24px_rgba(15,23,42,0.08)]"
           : "hover:-translate-y-[1px] hover:shadow-[0_10px_20px_rgba(15,23,42,0.06)]",
@@ -451,13 +456,14 @@ function OrderCard({
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
+      <div className="mt-1 flex flex-wrap items-center gap-1.5">
         <span className={`rounded-full px-3 py-1 text-[10px] font-extrabold ${tone.subtle}`}>
           {myItems.length} ítems
         </span>
         <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-extrabold text-slate-700">
           {totalUnits} artículos
         </span>
+        <span className="ml-auto rounded-full bg-slate-900 px-3 py-1 text-[11px] font-bold text-white">Ver pedido →</span>
       </div>
     </button>
   );
@@ -1064,137 +1070,81 @@ export default function OrdersTab({
   const deliveredOrders = buckets.delivered ?? [];
 
   const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("EMPTY");
-  const previousStageRef = useRef<StageKey | null>(null);
-  const returnToPriorityTimerRef = useRef<number | null>(null);
-  const manualUntilRef = useRef<number>(0);
-
-  const resolvePreferredStage = useCallback((): StageKey => {
-    if (pendingOrders.length > 0) return "PENDING";
-    if (preparingOrders.length > 0) return "PREPARING";
-    if (enRouteOrders.length > 0) return "EN_ROUTE";
-    return "DELIVERED";
-  }, [pendingOrders.length, preparingOrders.length, enRouteOrders.length]);
-
-  const activeStage: StageKey =
-    ordersFilter === "ALL" ? resolvePreferredStage() : ordersFilter;
+  const [attentionIds, setAttentionIds] = useState<string[]>([]);
+  const acknowledgedRef = useRef(new Set<string>());
+  const pendingKey = [...pendingOrders, ...preparingOrders.filter((o) => o.sourceType === "COMMERCE_ORDER" && o.commerceStatus === "CONFIRMED")].map((o) => o.id).sort().join(",");
 
   useEffect(() => {
-    return () => {
-      if (returnToPriorityTimerRef.current) {
-        window.clearTimeout(returnToPriorityTimerRef.current);
-        returnToPriorityTimerRef.current = null;
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (selectedOrderId && selectedOrder) {
-      setRightPanelMode("ORDER");
-    } else if (rightPanelMode === "ORDER") {
-      setRightPanelMode("EMPTY");
-    }
-  }, [selectedOrderId, selectedOrder, rightPanelMode]);
-
-  function armReturnToPriority() {
-    if (returnToPriorityTimerRef.current) {
-      window.clearTimeout(returnToPriorityTimerRef.current);
-    }
-
-    returnToPriorityTimerRef.current = window.setTimeout(() => {
-      manualUntilRef.current = 0;
-      const preferred = resolvePreferredStage();
-      setOrdersFilter(preferred);
-      setSelectedOrderId(null);
-    }, 30_000);
-  }
-
-  function markManualInteraction() {
-    manualUntilRef.current = Date.now() + 30_000;
-    armReturnToPriority();
-  }
+    acknowledgedRef.current = new Set();
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(`store-seen-orders:${storeCode}`) || "[]");
+      if (Array.isArray(saved)) acknowledgedRef.current = new Set(saved.filter((id): id is string => typeof id === "string"));
+    } catch {}
+    setAttentionIds([]);
+  }, [storeCode]);
 
   useEffect(() => {
     if (loading) return;
-    if (rightPanelMode === "KRONIX_ENVIOS") return;
+    setAttentionIds(pendingKey.split(",").filter((id) => id && !acknowledgedRef.current.has(id)));
+  }, [pendingKey, loading, storeCode]);
 
-    const preferred = resolvePreferredStage();
-    const now = Date.now();
-    const manualHoldActive = now < manualUntilRef.current;
+  useEffect(() => {
+    if (!attentionIds.length) return;
+    const acknowledge = () => {
+      attentionIds.forEach((id) => acknowledgedRef.current.add(id));
+      try { sessionStorage.setItem(`store-seen-orders:${storeCode}`, JSON.stringify([...acknowledgedRef.current].slice(-1000))); } catch {}
+      setAttentionIds([]);
+    };
+    window.addEventListener("pointerdown", acknowledge, true);
+    window.addEventListener("keydown", acknowledge, true);
+    return () => {
+      window.removeEventListener("pointerdown", acknowledge, true);
+      window.removeEventListener("keydown", acknowledge, true);
+    };
+  }, [attentionIds, storeCode]);
 
-    if (!manualHoldActive) {
-      if (ordersFilter === "ALL" || activeStage !== preferred) {
-        setOrdersFilter(preferred);
-        setSelectedOrderId(null);
-      }
-    }
-  }, [
-    loading,
-    ordersFilter,
-    activeStage,
-    resolvePreferredStage,
-    setOrdersFilter,
-    setSelectedOrderId,
-    rightPanelMode,
-  ]);
+  useEffect(() => {
+    if (selectedOrderId && selectedOrder) setRightPanelMode("ORDER");
+    else if (rightPanelMode === "ORDER") setRightPanelMode("EMPTY");
+  }, [selectedOrderId, selectedOrder, rightPanelMode]);
 
-  const stageTitle =
-    activeStage === "PENDING"
-      ? "Pendientes"
-      : activeStage === "PREPARING"
-      ? "En preparación"
-      : activeStage === "EN_ROUTE"
-      ? "En ruta"
-      : "Entregadas";
-
-  const stageOrders =
-    activeStage === "PENDING"
-      ? pendingOrders
-      : activeStage === "PREPARING"
-      ? preparingOrders
-      : activeStage === "EN_ROUTE"
-      ? enRouteOrders
-      : deliveredOrders;
-
-  const stageTone = getStageTone(activeStage);
-
-  function changeStage(next: StageKey) {
-    markManualInteraction();
-    setRightPanelMode("EMPTY");
-    setOrdersFilter(next);
-    setSelectedOrderId(null);
-  }
+  const stageTitle = "Órdenes";
+  const stageRows = [
+    ...pendingOrders.map((order) => ({ order, stage: "PENDING" as StageKey })),
+    ...preparingOrders.map((order) => ({ order, stage: "PREPARING" as StageKey })),
+    ...enRouteOrders.map((order) => ({ order, stage: "EN_ROUTE" as StageKey })),
+    ...deliveredOrders.map((order) => ({ order, stage: "DELIVERED" as StageKey })),
+  ];
+  const stageTone = getStageTone("DELIVERED");
 
   function openKronixEnvios() {
-    previousStageRef.current = activeStage;
-    markManualInteraction();
     setSelectedOrderId(null);
     setRightPanelMode("KRONIX_ENVIOS");
   }
 
   function openKronixEnviosHistory() {
-    previousStageRef.current = activeStage;
-    markManualInteraction();
     setSelectedOrderId(null);
     setRightPanelMode("KRONIX_ENVIOS_HISTORY");
   }
 
   async function handleKronixEnviosCreated() {
-    const previous = previousStageRef.current ?? resolvePreferredStage();
     setRightPanelMode("EMPTY");
     setSelectedOrderId(null);
-    setOrdersFilter(previous);
     await Promise.resolve(onRefresh());
   }
 
   function closeKronixEnvios() {
-    const previous = previousStageRef.current ?? activeStage;
     setRightPanelMode("EMPTY");
     setSelectedOrderId(null);
-    setOrdersFilter(previous);
   }
 
   return (
-    <div className="ct-tab-frame grid h-full min-h-0 grid-cols-[20%_30%_50%] gap-2 overflow-hidden">
+    <div className="ct-tab-frame grid h-full min-h-0 grid-cols-[minmax(0,20fr)_minmax(0,30fr)_minmax(0,50fr)] gap-2 overflow-hidden">
+      <style>{`
+        @keyframes storeOrderAttention { 0%, 100% { background-color: #ffedd5; } 50% { background-color: #facc15; } }
+        .store-new-order { animation: storeOrderAttention 1.8s ease-in-out infinite; outline: 2px solid #f59e0b; outline-offset: -2px; }
+        @media (prefers-reduced-motion: reduce) { .store-new-order { animation: none; background-color: #fef08a !important; } }
+      `}</style>
       <aside className="min-h-0 rounded-[20px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(248,250,252,0.96)_100%)] p-3 shadow-[0_10px_22px_rgba(15,23,42,0.06)]">
         <div className="h-full min-h-0 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="text-[9px] font-extrabold uppercase tracking-[0.20em] text-slate-400">
@@ -1202,13 +1152,6 @@ export default function OrdersTab({
           </div>
           <div className="mt-2 text-[16px] font-black leading-none text-slate-900">
             Vista operativa
-          </div>
-
-          <div className="mt-4 space-y-2">
-            <StageSidebarBtn active={activeStage === "PENDING" && rightPanelMode !== "KRONIX_ENVIOS"} label="Pendientes" count={pendingOrders.length} stage="PENDING" onClick={() => changeStage("PENDING")} />
-            <StageSidebarBtn active={activeStage === "PREPARING" && rightPanelMode !== "KRONIX_ENVIOS"} label="En preparación" count={preparingOrders.length} stage="PREPARING" onClick={() => changeStage("PREPARING")} />
-            <StageSidebarBtn active={activeStage === "EN_ROUTE" && rightPanelMode !== "KRONIX_ENVIOS"} label="En ruta" count={enRouteOrders.length} stage="EN_ROUTE" onClick={() => changeStage("EN_ROUTE")} />
-            <StageSidebarBtn active={activeStage === "DELIVERED" && rightPanelMode !== "KRONIX_ENVIOS"} label="Entregadas" count={deliveredOrders.length} stage="DELIVERED" onClick={() => changeStage("DELIVERED")} />
           </div>
 
           <div className="mt-3 flex flex-col gap-2">
@@ -1254,7 +1197,7 @@ export default function OrdersTab({
           </div>
 
           <div className="mt-3 rounded-[14px] border border-slate-200 bg-white/85 px-3 py-3 text-[11px] font-medium leading-snug text-slate-500">
-            Usa este panel para cambiar de etapa, operar la tienda y solicitar Domicilio Express sin salir del tablero.
+            Las órdenes se agrupan por estado: pendientes, preparación, en ruta y entregadas. Selecciona una para gestionarla.
           </div>
         </div>
       </aside>
@@ -1269,32 +1212,32 @@ export default function OrdersTab({
           <div className="flex items-center justify-between gap-3">
             <div className="text-[17px] font-black leading-none">{stageTitle}</div>
             <div className="rounded-full bg-white/20 px-3 py-1 text-sm font-extrabold">
-              {stageOrders.length}
+              {stageRows.length}
             </div>
           </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-3 pr-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             {loading ? (
               <div className="rounded-[16px] border border-dashed border-slate-200 bg-white/75 px-6 py-10 text-center">
                 <div className="text-[15px] font-black text-slate-700">Actualizando órdenes…</div>
               </div>
-            ) : !stageOrders.length ? (
+            ) : !stageRows.length ? (
               <EmptyStage title={stageTitle} cityName={storeCity.cityName} />
             ) : (
-              stageOrders.map((order) => (
+              stageRows.map(({ order, stage }) => (
                 <OrderCard
                   key={order.id}
                   order={order}
                   active={selectedOrderId === order.id && rightPanelMode === "ORDER"}
                   onClick={() => {
-                    markManualInteraction();
                     setRightPanelMode("ORDER");
                     setSelectedOrderId(order.id);
                   }}
                   storeCode={storeCode}
-                  stage={activeStage}
+                  stage={stage}
+                  attention={attentionIds.includes(order.id)}
                 />
               ))
             )}

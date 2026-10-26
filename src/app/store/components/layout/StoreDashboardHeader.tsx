@@ -1,7 +1,7 @@
 // src/app/store/components/layout/StoreDashboardHeader.tsx
 "use client";
 
-import type { Dispatch, SetStateAction } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import Image from "next/image";
 
 import { LOCK_STORE_AFTER_LOGIN, TabKey } from "../../lib/storeTypes";
@@ -119,6 +119,10 @@ export default function StoreDashboardHeader({
   accessToken,
   onLogout,
 }: Props) {
+  const [failedImages, setFailedImages] = useState<string[]>([]);
+  const localLogo = /^3\s*am(?:\s|$)/i.test(storeName.trim()) ? "/Establecimientos/3AM/logo.png" : "";
+  const primaryImage = storeImageUrl || localLogo;
+  const displayedImage = [primaryImage, localLogo].find((src) => src && !failedImages.includes(src)) || "";
   const storeCity = useStoreCity();
   const cityShort = storeCity.cityName || storeCityLabel || "Ciudad";
   const storeNameTextClass = getStoreNameTextClass(storeName);
@@ -160,8 +164,8 @@ export default function StoreDashboardHeader({
           <div className="flex min-w-0 items-center justify-end gap-2">
             <div className="flex h-[48px] min-w-0 flex-1 items-center gap-2 rounded-full bg-slate-50 px-1.5 py-1 ring-1 ring-slate-200">
               <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200">
-                {storeImageUrl ? (
-                  <Image src={storeImageUrl} alt={storeName} fill className="object-cover" />
+                {displayedImage ? (
+                  <Image src={displayedImage} alt={storeName} fill sizes="40px" className="object-contain" unoptimized onError={() => setFailedImages((previous) => [...previous, displayedImage])} />
                 ) : (
                   <div className="grid h-full w-full place-items-center text-[12px] text-slate-700">
                     {storeIcon}
